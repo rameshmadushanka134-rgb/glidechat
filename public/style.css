@@ -2642,3 +2642,14 @@ input:checked + .slider:before {
   flex-direction: column;
   gap: 1rem;
 }
+
+/* Hide header and footer when no chat is active */
+.chat-workspace.no-active-chat .chat-header,
+.chat-workspace.no-active-chat .chat-footer {
+  display: none !important;
+}
+
+.chat-workspace.no-active-chat .messages-container {
+  height: 100%;
+}
+

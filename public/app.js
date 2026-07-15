@@ -3,7 +3,7 @@ let socket;
 
 // Application State
 let currentUser = null;
-let activeChat = 'group'; // 'group' or a username
+let activeChat = null; // 'group', a username, or null if no active chat
 let registeredUsers = [];
 const unreadCounts = new Map();
 const typingTimers = new Map();
@@ -446,7 +446,9 @@ function showChatWorkspace() {
   initSocket();
   fetchUsers();
   fetchGroups();
-  selectChat('group');
+  // Do not select any chat by default so the dashboard/sidebar opens first
+  // selectChat('group');
+  chatContainer.classList.add('no-active-chat'); 
   fetchStatuses();
 
   // Request notification permissions and register service worker subscription
@@ -792,7 +794,7 @@ async function toggleBlockUser(targetUsername, action) {
     renderUsersList();
     fetchStatuses();
     
-    if (activeChat.toLowerCase() === targetUsername.toLowerCase()) {
+    if (activeChat && activeChat.toLowerCase() === targetUsername.toLowerCase()) {
       updateHeaderBlockButton(targetUsername);
     }
   } catch (err) {
@@ -1801,7 +1803,7 @@ function initSocket() {
     
     renderUsersList();
 
-    if (activeChat.toLowerCase() === username.toLowerCase()) {
+    if (activeChat && activeChat.toLowerCase() === username.toLowerCase()) {
       activeChatStatus.textContent = online ? 'Online' : 'Offline';
     }
 
@@ -1846,7 +1848,7 @@ function initSocket() {
     const previewText = msg.file ? `📎 [File] ${msg.file.name}` : msg.text;
     updateSidebarPreview(otherUser, `${msg.sender}: ${previewText}`);
 
-    if (activeChat !== 'group' && activeChat.toLowerCase() === otherUser.toLowerCase()) {
+    if (activeChat && activeChat !== 'group' && activeChat.toLowerCase() === otherUser.toLowerCase()) {
       appendMessage(msg);
       if (msg.sender.toLowerCase() !== currentUser.username.toLowerCase()) {
         socket.emit('read_messages', { sender: msg.sender });
@@ -1861,7 +1863,7 @@ function initSocket() {
   });
 
   socket.on('private_message_error', ({ to, error }) => {
-    if (activeChat.toLowerCase() === to.toLowerCase()) {
+    if (activeChat && activeChat.toLowerCase() === to.toLowerCase()) {
       const welcomePlaceholder = messagesDisplay.querySelector('.welcome-chat');
       if (welcomePlaceholder) welcomePlaceholder.remove();
 
@@ -2012,7 +2014,7 @@ function initSocket() {
       } else {
         clearTypingIndicator(from);
       }
-    } else if (to !== 'group' && activeChat !== 'group' && activeChat.toLowerCase() === from.toLowerCase()) {
+    } else if (to !== 'group' && activeChat && activeChat !== 'group' && activeChat.toLowerCase() === from.toLowerCase()) {
       if (isTyping) {
         showTypingIndicator('typing...', from);
       } else {
@@ -2022,7 +2024,7 @@ function initSocket() {
   });
 
   socket.on('messages_delivered', ({ receiver, messageIds }) => {
-    if (activeChat !== 'group' && activeChat.toLowerCase() === receiver.toLowerCase()) {
+    if (activeChat && activeChat !== 'group' && activeChat.toLowerCase() === receiver.toLowerCase()) {
       messageIds.forEach(id => {
         const bubble = document.getElementById(`msg-${id}`);
         if (bubble) {
@@ -2040,7 +2042,7 @@ function initSocket() {
   });
 
   socket.on('messages_read', ({ reader, messageIds }) => {
-    if (activeChat !== 'group' && activeChat.toLowerCase() === reader.toLowerCase()) {
+    if (activeChat && activeChat !== 'group' && activeChat.toLowerCase() === reader.toLowerCase()) {
       messageIds.forEach(id => {
         const bubble = document.getElementById(`msg-${id}`);
         if (bubble) {
@@ -2270,6 +2272,7 @@ function renderUsersList() {
 }
 
 function selectChat(target) {
+  chatContainer.classList.remove('no-active-chat');
   switchSidebarNav('chats');
   typingIndicatorBox.classList.add('hidden');
   typingTimers.clear();
@@ -2457,7 +2460,7 @@ function appendMessage(msg) {
 
 function handleSendMessage(e) {
   e.preventDefault();
-  if (!socket) return;
+  if (!socket || !activeChat) return;
 
   const text = messageInput.value.trim();
   if (!text) return;
