@@ -1,0 +1,10 @@
+node_modules/
+*.zip
+*.bak
+vapid.json
+
+# Ignore user uploads but keep the folders
+public/uploads/avatars/*
+!public/uploads/avatars/.gitkeep
+public/uploads/files/*
+!public/uploads/files/.gitkeep

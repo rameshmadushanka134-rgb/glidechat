@@ -1,0 +1,20 @@
+{
+  "name": "massaging-web",
+  "version": "1.0.0",
+  "description": "A real-time cross-device chat application using username/password login.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "mongoose": "^9.7.4",
+    "multer": "^2.2.0",
+    "socket.io": "^4.8.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlideChat - Real-Time Messaging</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS Styling -->
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome Icons for modern aesthetic -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="theme-purple">
+
+  <div class="app-wrapper">
+    <!-- BACKGROUND GLOWS FOR GLASSMORPHISM AESTHETIC -->
+    <div class="glow-bg glow-1"></div>
+    <div class="glow-bg glow-2"></div>
+
+    <!-- 1. AUTHENTICATION CONTAINER (LOGIN & REGISTER) -->
+    <div id="auth-container" class="auth-card">
+      <div class="auth-header">
+        <div class="logo">
+          <i class="fa-solid fa-paper-plane"></i>
+          <h1>GlideChat</h1>
+        </div>
+        <p class="subtitle">Connect securely without phone numbers</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form active">
+        <h2>Welcome Back</h2>
+        <div class="input-group">
+          <label for="login-username"><i class="fa-solid fa-user"></i> Username</label>
+          <input type="text" id="login-username" placeholder="Enter your username" required autocomplete="username">
+        </div>
+        <div class="input-group">
+          <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+          <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+        <div class="error-msg" id="login-error"></div>
+        <button type="submit" class="btn btn-primary">Log In</button>
+        <p class="switch-form-text">Don't have an account? <span class="toggle-link" onclick="switchForm('register')">Sign Up</span></p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form">
+        <h2>Create Account</h2>
+        <div class="input-group">
+          <label for="register-username"><i class="fa-solid fa-user"></i> Username</label>
+          <input type="text" id="register-username" placeholder="Choose a username" required minlength="3" autocomplete="username">
+        </div>
+        <div class="input-group">
+          <label for="register-password"><i class="fa-solid fa-lock"></i> Password</label>
+          <input type="password" id="register-password" placeholder="Choose a password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="input-group">
+          <label for="register-confirm-password"><i class="fa-solid fa-check-double"></i> Confirm Password</label>
+          <input type="password" id="register-confirm-password" placeholder="Confirm your password" required minlength="6" autocomplete="new-password">
+        </div>
+        <div class="error-msg" id="register-error"></div>
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+        <p class="switch-form-text">Already have an account? <span class="toggle-link" onclick="switchForm('login')">Log In</span></p>
+      </form>
+    </div>
+
+    <!-- 2. CHAT CLIENT WORKSPACE -->
+    <div id="chat-container" class="chat-workspace hidden">
+      <!-- SIDEBAR -->
+      <aside class="chat-sidebar" id="chat-sidebar">
+        <header class="sidebar-header">
+          <div class="user-profile">
+            <div class="avatar" id="current-user-avatar">U</div>
+            <div class="user-info">
+              <span class="user-name" id="current-user-display">Username</span>
+              <span class="user-status"><span class="status-dot online"></span>Online</span>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button id="settings-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+            <button id="logout-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          </div>
+        </header>
+
+        <!-- SIDEBAR NAVIGATION TABS -->
+        <div class="sidebar-nav" style="display: flex; gap: 0.5rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.1);">
+          <button id="nav-chats-btn" class="btn btn-sm btn-primary" style="flex: 1; border-radius: 8px; font-weight: 600;"><i class="fa-solid fa-message"></i> Chats</button>
+          <button id="nav-feed-btn" class="btn btn-sm" style="flex: 1; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: var(--transition-fast);"><i class="fa-solid fa-film"></i> Reels & Posts</button>
+        </div>
+
+        <!-- STATUS TRAY (Stories) -->
+        <div class="status-tray-container">
+          <div class="status-tray" id="status-tray">
+            <!-- My Status avatar element -->
+            <div class="status-tray-item" id="my-status-item">
+              <div class="status-circle" id="my-status-circle">
+                <div class="status-avatar" id="my-status-avatar">U</div>
+                <div class="status-plus-badge" id="post-status-btn"><i class="fa-solid fa-plus"></i></div>
+              </div>
+              <span class="status-label">My Status</span>
+            </div>
+            <!-- Populated dynamically via javascript -->
+          </div>
+        </div>
+
+        <div class="sidebar-search">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="search-users" placeholder="Search contacts...">
+          </div>
+        </div>
+
+        <div class="chat-tabs-container">
+          <div class="tab-title" style="display: flex; justify-content: space-between; align-items: center; padding-right: 1.5rem;">
+            <span>Rooms & Channels</span>
+            <button id="create-group-btn" title="Create Custom Group" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; transition: var(--transition-fast); padding: 2px;"><i class="fa-solid fa-plus-circle"></i></button>
+          </div>
+          <ul class="chat-list" id="rooms-list">
+            <li class="chat-item active" id="chat-item-group" onclick="selectChat('group')">
+              <div class="chat-avatar group-avatar"><i class="fa-solid fa-users"></i></div>
+              <div class="chat-details">
+                <span class="chat-name">Public Group Room</span>
+                <span class="chat-preview" id="group-preview">Chat with everyone here</span>
+              </div>
+              <div class="badge hidden" id="badge-group">0</div>
+            </li>
+          </ul>
+
+          <div class="tab-title">Direct Messages</div>
+          <ul class="chat-list" id="users-list">
+            <!-- Dynamically populated users list -->
+          </ul>
+        </div>
+      </aside>
+
+      <!-- MAIN CHAT AREA -->
+      <main class="chat-main" id="chat-main">
+        <!-- CHAT HEADER -->
+        <header class="chat-header">
+          <button id="mobile-back-btn" class="mobile-btn"><i class="fa-solid fa-arrow-left"></i></button>
+          <div class="chat-avatar" id="active-chat-avatar"><i class="fa-solid fa-users"></i></div>
+          <div class="active-chat-info">
+            <h2 id="active-chat-title">Public Group Room</h2>
+            <span class="chat-status" id="active-chat-status">Everyone can read and send messages</span>
+          </div>
+          <div class="chat-header-actions" style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem;">
+            <button id="header-group-info-btn" class="header-action-btn hidden" title="Group Settings"><i class="fa-solid fa-circle-info"></i></button>
+            <button id="header-voice-call-btn" class="header-action-btn" title="Voice Call"><i class="fa-solid fa-phone"></i></button>
+            <button id="header-video-call-btn" class="header-action-btn" title="Video Call"><i class="fa-solid fa-video"></i></button>
+            <button id="header-clear-btn" class="header-action-btn" title="Clear Chat History"><i class="fa-solid fa-broom"></i></button>
+            <button id="header-block-btn" class="header-action-btn" title="Block User"><i class="fa-solid fa-user-slash"></i></button>
+          </div>
+        </header>
+
+        <!-- CHAT MESSAGES DISPLAY -->
+        <div class="messages-container" id="messages-display">
+          <!-- Welcome instructions, fallback if empty -->
+          <div class="welcome-chat">
+            <i class="fa-solid fa-comments"></i>
+            <h3>Welcome to GlideChat!</h3>
+            <p>Start a secure conversation. Messages are delivered in real-time.</p>
+          </div>
+        </div>
+
+        <!-- TYPING INDICATOR -->
+        <div class="typing-indicator-container hidden" id="typing-indicator-box">
+          <div class="typing-bubble">
+            <div class="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span id="typing-indicator-text">someone is typing...</span>
+          </div>
+        </div>
+
+        <!-- CHAT INPUT BAR -->
+        <footer class="chat-footer">
+          <form id="message-form">
+            <!-- Emoji trigger, attachment icon (aesthetics) -->
+            <button type="button" class="footer-action-btn" id="emoji-btn" title="Add Emoji"><i class="fa-regular fa-face-smile"></i></button>
+            <button type="button" class="footer-action-btn" id="attach-btn" title="Send File"><i class="fa-solid fa-paperclip"></i></button>
+            <input type="file" id="file-input" class="hidden">
+            
+            <div class="input-wrapper">
+              <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
+            </div>
+            
+            <button type="submit" class="send-btn" id="send-btn" title="Send Message">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+
+          <!-- Emoji Picker Popover -->
+          <div id="emoji-picker" class="emoji-picker hidden">
+            <span onclick="insertEmoji('😀')">😀</span>
+            <span onclick="insertEmoji('😂')">😂</span>
+            <span onclick="insertEmoji('😍')">😍</span>
+            <span onclick="insertEmoji('😎')">😎</span>
+            <span onclick="insertEmoji('👍')">👍</span>
+            <span onclick="insertEmoji('🔥')">🔥</span>
+            <span onclick="insertEmoji('🎉')">🎉</span>
+            <span onclick="insertEmoji('❤️')">❤️</span>
+            <span onclick="insertEmoji('👀')">👀</span>
+            <span onclick="insertEmoji('👏')">👏</span>
+            <span onclick="insertEmoji('🙌')">🙌</span>
+            <span onclick="insertEmoji('😢')">😢</span>
+            <span onclick="insertEmoji('😮')">😮</span>
+            <span onclick="insertEmoji('🙏')">🙏</span>
+            <span onclick="insertEmoji('✨')">✨</span>
+            <span onclick="insertEmoji('💬')">💬</span>
+          </div>
+        </footer>
+      </main>
+
+      <!-- SOCIAL TIMELINE & REELS PANEL -->
+      <main class="chat-main hidden" id="feed-main" style="display: flex; flex-direction: column; height: 100%;">
+        <!-- FEED HEADER -->
+        <header class="chat-header">
+          <button id="mobile-back-feed-btn" class="mobile-btn"><i class="fa-solid fa-arrow-left"></i></button>
+          <div class="chat-avatar" style="background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%); color: white; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-square-rss"></i></div>
+          <div class="active-chat-info">
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: white;">Reels & Posts Feed</h2>
+            <span class="chat-status" id="feed-header-status">Facebook-style social sharing feed</span>
+          </div>
+          
+          <div style="margin-left: auto; display: flex; gap: 0.5rem; background: rgba(0,0,0,0.25); padding: 4px; border-radius: 10px; border: 1px solid var(--border-color);">
+            <button id="feed-filter-all-btn" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.78rem; cursor: pointer;">All Posts</button>
+            <button id="feed-filter-reels-btn" class="btn btn-sm" style="padding: 0.4rem 0.85rem; border-radius: 8px; font-size: 0.78rem; color: var(--text-secondary); background: none; border: none; cursor: pointer; transition: var(--transition-fast);">Only Reels</button>
+          </div>
+        </header>
+
+        <!-- NEWS FEED SCROLL VIEW -->
+        <div class="messages-container" id="feed-scroll-container" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center;">
+          
+          <!-- Search Engine Box -->
+          <div style="width: 100%; max-width: 580px; display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="search-box" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
+              <input type="text" id="feed-search-input" placeholder="Search posts, reels, or users..." style="background: none; border: none; color: white; width: 100%; outline: none; font-size: 0.9rem; font-family: inherit;">
+              <button id="feed-search-clear-btn" class="hidden" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- Horizontal People Tray -->
+            <div id="feed-people-tray" class="hidden" style="width: 100%; display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.15); padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); box-sizing: border-box;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 700;">Matching People</span>
+              <div id="feed-people-list" style="display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 4px; width: 100%;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Composer Card: What's on your mind? -->
+          <div class="post-card glass" id="feed-composer-card" style="width: 100%; max-width: 580px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; border-radius: 16px;">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+              <div class="avatar" id="feed-composer-avatar" style="width: 40px; height: 40px; border-radius: 50%;">U</div>
+              <textarea id="feed-composer-text" placeholder="What's on your mind?" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 12px; padding: 0.75rem 1rem; color: white; resize: none; min-height: 70px; outline: none; font-size: 0.9rem; font-family: inherit; transition: border-color var(--transition-fast);"></textarea>
+            </div>
+            
+            <div id="feed-composer-preview-container" class="hidden" style="position: relative; border-radius: 12px; overflow: hidden; max-height: 240px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.25); display: flex; justify-content: center; align-items: center; width: 100%;">
+              <button id="feed-composer-remove-media-btn" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.9); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10;" title="Remove Media"><i class="fa-solid fa-xmark"></i></button>
+              <img id="feed-composer-img-preview" class="hidden" style="width: 100%; height: auto; object-fit: contain; max-height: 240px;">
+              <video id="feed-composer-video-preview" class="hidden" style="width: 100%; height: auto; max-height: 240px;" muted controls></video>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.85rem;">
+              <button id="feed-composer-file-btn" class="btn btn-sm" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; display: flex; align-items: center; gap: 0.45rem; cursor: pointer; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600;">
+                <i class="fa-solid fa-photo-film" style="color: #10b981;"></i> Photo / Video / Reel
+              </button>
+              <input type="file" id="feed-composer-file-input" accept="image/*,video/*" class="hidden">
+              
+              <button id="feed-composer-submit-btn" class="btn btn-primary btn-sm" style="padding: 0.5rem 1.5rem; border-radius: 8px; font-weight: 600;">Publish</button>
+            </div>
+          </div>
+
+          <!-- FEED LISTING DISPLAYS -->
+          <div id="feed-posts-display" style="width: 100%; max-width: 580px; display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Render timelines dynamically -->
+          </div>
+
+        </div>
+      </main>
+    </div>
+
+    <!-- USER PROFILE MODAL (Inspect Other Users) -->
+    <div id="user-profile-modal" class="modal-overlay hidden">
+      <div class="profile-modal-card glass">
+        <button class="modal-close" id="close-profile-modal-btn" title="Close Profile"><i class="fa-solid fa-xmark"></i></button>
+        
+        <div class="profile-banner"></div>
+        
+        <div class="profile-header-details">
+          <div id="profile-modal-avatar-container">
+            <!-- Populated dynamically -->
+          </div>
+          <h2 id="profile-modal-username">Username</h2>
+          <span id="profile-modal-status-badge"><span class="status-dot"></span>Offline</span>
+          <p id="profile-modal-bio">User bio...</p>
+        </div>
+
+        <div class="profile-actions-row">
+          <button id="profile-action-msg-btn" class="btn btn-primary btn-sm profile-action-btn">
+            <i class="fa-solid fa-comment"></i> Send Message
+          </button>
+          <button id="profile-action-block-btn" class="btn btn-sm profile-action-btn" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171;">
+            <i class="fa-solid fa-ban"></i> Block User
+          </button>
+        </div>
+
+        <div class="profile-posts-section">
+          <h3>Posts & Reels</h3>
+          <div id="profile-posts-list">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <button class="modal-close" id="close-settings-btn" title="Close Settings"><i class="fa-solid fa-xmark"></i></button>
+        
+        <div class="modal-body">
+          <!-- Modal Tab Navigation -->
+          <aside class="modal-sidebar">
+            <h3>Dashboard</h3>
+            <ul class="modal-nav">
+              <li class="modal-nav-item active" id="tab-nav-account" onclick="switchSettingsTab('account')">
+                <i class="fa-solid fa-user-gear"></i> Account
+              </li>
+              <li class="modal-nav-item" id="tab-nav-appearance" onclick="switchSettingsTab('appearance')">
+                <i class="fa-solid fa-palette"></i> Settings
+              </li>
+              <li class="modal-nav-item" id="tab-nav-privacy" onclick="switchSettingsTab('privacy')">
+                <i class="fa-solid fa-shield-halved"></i> Privacy
+              </li>
+            </ul>
+          </aside>
+          
+          <!-- Modal Content Sections -->
+          <main class="modal-content">
+            <!-- Tab: Account -->
+            <section id="settings-tab-account" class="settings-tab-content active">
+              <h2>Profile Customization</h2>
+              
+              <!-- Avatar DP Upload Section -->
+              <div class="avatar-upload-container">
+                <div class="avatar avatar-large" id="settings-avatar-preview">U</div>
+                <div class="avatar-upload-controls">
+                  <input type="file" id="avatar-input" accept="image/*" class="hidden">
+                  <button type="button" class="btn btn-primary btn-sm" id="upload-avatar-btn"><i class="fa-solid fa-camera"></i> Change Photo</button>
+                  <span class="setting-desc">JPG, PNG or GIF. Max size 5MB.</span>
+                </div>
+              </div>
+              
+              <form id="profile-settings-form" class="modal-form">
+                <div class="input-group">
+                  <label for="settings-bio"><i class="fa-solid fa-quote-left"></i> Profile Bio / Status</label>
+                  <input type="text" id="settings-bio" placeholder="Tell other contacts about yourself...">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Save Profile</button>
+              </form>
+              
+              <hr class="modal-divider">
+              
+              <h2>Change Password</h2>
+              <form id="password-settings-form" class="modal-form">
+                <div class="input-group">
+                  <label for="settings-old-password"><i class="fa-solid fa-key"></i> Current Password</label>
+                  <input type="password" id="settings-old-password" required autocomplete="current-password">
+                </div>
+                <div class="input-group">
+                  <label for="settings-new-password"><i class="fa-solid fa-lock"></i> New Password</label>
+                  <input type="password" id="settings-new-password" required minlength="6" autocomplete="new-password">
+                </div>
+                <div class="error-msg" id="password-settings-error"></div>
+                <div class="success-msg" id="password-settings-success"></div>
+                <button type="submit" class="btn btn-primary btn-sm">Update Password</button>
+              </form>
+            </section>
+            
+            <!-- Tab: Settings / Appearance -->
+            <section id="settings-tab-appearance" class="settings-tab-content">
+              <h2>General Preferences</h2>
+              
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-title">Select Color Theme</span>
+                  <span class="setting-desc">Choose your visual aesthetic style</span>
+                </div>
+                <div class="theme-grid">
+                  <button type="button" class="theme-preset-btn theme-preset-purple active" id="theme-btn-purple" onclick="setTheme('purple')" title="Midnight Purple">
+                    <span class="color-dot"></span> Purple
+                  </button>
+                  <button type="button" class="theme-preset-btn theme-preset-green" id="theme-btn-green" onclick="setTheme('green')" title="Emerald Breeze">
+                    <span class="color-dot"></span> Green
+                  </button>
+                  <button type="button" class="theme-preset-btn theme-preset-blue" id="theme-btn-blue" onclick="setTheme('blue')" title="Ocean Wave">
+                    <span class="color-dot"></span> Blue
+                  </button>
+                  <button type="button" class="theme-preset-btn theme-preset-amber" id="theme-btn-amber" onclick="setTheme('amber')" title="Ember Sunset">
+                    <span class="color-dot"></span> Amber
+                  </button>
+                </div>
+              </div>
+              
+              <hr class="modal-divider">
+              
+              <h2>Notification Preferences</h2>
+              <div class="setting-item flex-row">
+                <div class="setting-info">
+                  <span class="setting-title">Sound Alerts</span>
+                  <span class="setting-desc">Play sound notification when messages are received</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="settings-sound-toggle" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="setting-item flex-row" style="margin-top: 1.25rem;">
+                <div class="setting-info">
+                  <span class="setting-title">Web Push Notifications (Background Alerts)</span>
+                  <span class="setting-desc" id="push-status-desc">Loading system notifications status...</span>
+                </div>
+                <div id="push-status-badge" class="badge-status">Checking</div>
+              </div>
+            </section>
+            
+            <!-- Tab: Privacy -->
+            <section id="settings-tab-privacy" class="settings-tab-content">
+              <h2>Privacy Settings</h2>
+              
+              <div class="setting-item flex-row">
+                <div class="setting-info">
+                  <span class="setting-title">Incognito Status (Hide Online Status)</span>
+                  <span class="setting-desc">Appear offline to other contacts while you are online</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="settings-incognito-toggle">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              
+              <hr class="modal-divider">
+              
+              <h2>Blocked Contacts</h2>
+              <p class="setting-desc" style="margin-bottom: 1rem;">Blocked contacts cannot send you direct messages and cannot see your online status.</p>
+              
+              <ul class="blocked-list" id="blocked-users-list">
+                <!-- Populate blocked list dynamically -->
+                <li class="no-blocked-users">No blocked contacts yet</li>
+              </ul>
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. STATUS UPLOAD MODAL -->
+    <div id="status-upload-modal" class="modal-overlay hidden">
+      <div class="modal-card modal-card-sm" style="max-width: 440px; height: auto; max-height: 90vh;">
+        <button class="modal-close" id="close-status-upload-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 2rem;">
+          <h2 style="font-size: 1.25rem; font-weight:600; margin-bottom: 1.25rem; border-bottom:1px solid var(--border-color); padding-bottom: 0.5rem;">Update Status Story</h2>
+          
+          <!-- Mode toggles -->
+          <div class="upload-tab-nav" style="display:flex; gap:0.5rem; margin-bottom: 1.25rem;">
+            <button type="button" class="btn btn-sm btn-primary" id="status-tab-btn-text" onclick="switchStatusUploadTab('text')">Text Status</button>
+            <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,0.04); border:1px solid var(--border-color); color:white;" id="status-tab-btn-image" onclick="switchStatusUploadTab('image')">Photo / Video</button>
+          </div>
+          
+          <!-- Text Story Creator Form -->
+          <div id="status-upload-text-sec">
+            <form id="text-status-form" class="modal-form">
+              <div class="input-group">
+                <label for="status-text-input">Status Story Message</label>
+                <textarea id="status-text-input" placeholder="Type what is on your mind..." style="width:100%; height: 110px; padding:0.75rem; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:white; font-size:0.95rem; resize:none; outline:none; line-height:1.4;" required maxlength="120"></textarea>
+              </div>
+              
+              <div class="setting-item" style="margin-top: 0.25rem;">
+                <span class="setting-title" style="font-size:0.8rem; color:var(--text-secondary); font-weight: 500;">Background Gradient Preset</span>
+                <div class="theme-grid" style="grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top:0.4rem;">
+                  <button type="button" class="theme-preset-btn active" id="grad-btn-1" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); height: 38px; padding:0; border-radius:8px;" onclick="selectStatusGradient(1)"></button>
+                  <button type="button" class="theme-preset-btn" id="grad-btn-2" style="background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); height: 38px; padding:0; border-radius:8px;" onclick="selectStatusGradient(2)"></button>
+                  <button type="button" class="theme-preset-btn" id="grad-btn-3" style="background: linear-gradient(135deg, #0284c7 0%, #3b82f6 100%); height: 38px; padding:0; border-radius:8px;" onclick="selectStatusGradient(3)"></button>
+                  <button type="button" class="theme-preset-btn" id="grad-btn-4" style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); height: 38px; padding:0; border-radius:8px;" onclick="selectStatusGradient(4)"></button>
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary" style="margin-top: 1.25rem; width: 100%;"><i class="fa-solid fa-share"></i> Share Status</button>
+            </form>
+          </div>
+          
+          <!-- Image / Video Story Creator Form -->
+          <div id="status-upload-image-sec" class="hidden">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border-color); border-radius: 16px; padding: 2.25rem 1.25rem; text-align: center; background: rgba(255,255,255,0.015);">
+              <i class="fa-solid fa-photo-film" style="font-size: 2.5rem; color: var(--accent-primary); margin-bottom: 0.85rem;"></i>
+              <p class="setting-title" style="margin-bottom: 0.25rem; font-size: 0.95rem;">Select Photo or Video</p>
+              <p class="setting-desc" style="margin-bottom: 1.25rem; font-size:0.75rem;">Support Images and Videos up to 30MB</p>
+              <input type="file" id="status-image-input" accept="image/*,video/*" class="hidden">
+              <button class="btn btn-primary btn-sm" id="select-status-image-btn"><i class="fa-solid fa-photo-film"></i> Choose File</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. STATUS STORY VIEWER MODAL (Full Viewport) -->
+    <div id="status-viewer-modal" class="modal-overlay hidden" style="background: rgba(4, 6, 12, 0.97); z-index: 300;">
+      
+      <div class="story-viewer-card">
+        <!-- Navigation zones inside card -->
+        <div class="story-tap-zone story-tap-left" id="story-tap-left"></div>
+        <div class="story-tap-zone story-tap-right" id="story-tap-right"></div>
+        <!-- Progress Indicators -->
+        <div class="story-progress-container" id="story-progress-container">
+          <!-- Populated dynamically: <div class="story-progress-segment"><div class="story-progress-fill"></div></div> -->
+        </div>
+        
+        <!-- Story Header -->
+        <header class="story-header" style="display:flex; align-items:center; gap:0.75rem; padding: 0.85rem 1rem 0.5rem; color:white; z-index:100; position:relative;">
+          <div class="avatar" id="story-author-avatar" style="width: 38px; height: 38px; box-shadow:none;">A</div>
+          <div style="display:flex; flex-direction:column; justify-content:center; gap:0.15rem;">
+            <span id="story-author-name" style="font-weight: 600; font-size: 0.9rem; letter-spacing: -0.2px;">Alice</span>
+            <span id="story-time-label" style="font-size: 0.72rem; color: rgba(255,255,255,0.55);">2h ago</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+            <button id="delete-story-btn" class="hidden" style="background:none; border:none; color:rgba(255,255,255,0.7); font-size:1.1rem; cursor:pointer; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition: var(--transition-fast);" title="Delete Status"><i class="fa-solid fa-trash-can"></i></button>
+            <button id="close-story-viewer-btn" style="background:none; border:none; color:white; font-size:1.25rem; cursor:pointer; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition: var(--transition-fast);" title="Close Viewer"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </header>
+        
+        <!-- Viewing Stage -->
+        <div class="story-stage" id="story-stage">
+          <!-- Gradient or Image inserted dynamically -->
+        </div>
+      </div>
+    </div>
+    <!-- 5. CALL OVERLAY -->
+    <div id="call-overlay" class="call-overlay hidden">
+      <div class="call-card glass">
+        <!-- Call Header / Info -->
+        <div class="call-user-info">
+          <div class="call-avatar" id="call-avatar-box">B</div>
+          <h2 id="call-username">Bob</h2>
+          <p id="call-status">Calling...</p>
+        </div>
+        
+        <!-- Video Containers -->
+        <div class="video-container hidden" id="call-video-container">
+          <!-- Remote video takes up the whole background -->
+          <video id="remote-video" autoplay playsinline class="remote-video"></video>
+          <!-- Local video floats in the corner (Picture-in-Picture) -->
+          <video id="local-video" autoplay playsinline muted class="local-video"></video>
+        </div>
+        <!-- Audio helper for voice calls (keeps sound active when video wrapper is hidden) -->
+        <audio id="remote-audio" autoplay style="position: absolute; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;"></audio>
+        
+        <!-- Call Controls -->
+        <div class="call-controls">
+          <!-- Incoming controls (Answer/Reject) -->
+          <div class="incoming-controls hidden" id="incoming-call-controls">
+            <button id="answer-call-btn" class="control-btn accept-btn" title="Answer"><i class="fa-solid fa-phone"></i></button>
+            <button id="reject-call-btn" class="control-btn reject-btn" title="Reject"><i class="fa-solid fa-phone-slash"></i></button>
+          </div>
+          <!-- Ongoing/Outgoing controls (Mute, Camera Toggle, Hang Up) -->
+          <div class="active-controls" id="active-call-controls">
+            <button id="mute-mic-btn" class="control-btn active" title="Mute Microphone"><i class="fa-solid fa-microphone"></i></button>
+            <button id="toggle-video-btn" class="control-btn active" title="Toggle Camera"><i class="fa-solid fa-video"></i></button>
+            <button id="hangup-call-btn" class="control-btn reject-btn" title="Hang Up"><i class="fa-solid fa-phone-slash"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. CREATE GROUP MODAL -->
+    <div id="group-create-modal" class="modal-overlay hidden" style="z-index: 250;">
+      <div class="modal-card modal-card-sm" style="max-width: 440px; height: auto; max-height: 90vh; border-radius: 20px;">
+        <button class="modal-close" id="close-group-create-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 2rem;">
+          <h2 style="font-size: 1.25rem; font-weight:600; margin-bottom: 1.25rem; border-bottom:1px solid var(--border-color); padding-bottom: 0.5rem; color: white;"><i class="fa-solid fa-users-rectangle"></i> Create New Group</h2>
+          
+          <form id="group-create-form" style="display:flex; flex-direction:column; gap:1.25rem;">
+            <div class="input-group">
+              <label for="group-name-input" style="color: var(--text-secondary); margin-bottom: 0.5rem; display: block; font-size: 0.85rem;"><i class="fa-solid fa-signature"></i> Group Name</label>
+              <input type="text" id="group-name-input" placeholder="e.g. Project Team" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white;">
+            </div>
+            
+            <div class="input-group">
+              <label style="color: var(--text-secondary); margin-bottom: 0.5rem; display: block; font-size: 0.85rem;"><i class="fa-solid fa-user-plus"></i> Select Members</label>
+              <div id="group-members-select-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius:12px; background: rgba(0,0,0,0.15); padding: 0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+                <!-- List users with checkboxes -->
+              </div>
+            </div>
+            
+            <div class="error-msg" id="group-create-error" style="color: #ef4444; font-size: 0.85rem;"></div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.75rem;">Create Group</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. GROUP INFO & SETTINGS MODAL -->
+    <div id="group-info-modal" class="modal-overlay hidden" style="z-index: 250;">
+      <div class="modal-card modal-card-sm" style="max-width: 460px; height: auto; max-height: 90vh; border-radius: 20px;">
+        <button class="modal-close" id="close-group-info-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+        <div style="padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem;">
+          <h2 id="group-info-name" style="font-size: 1.3rem; font-weight:700; margin-bottom: 0.25rem; color: white;">Group Name</h2>
+          <p id="group-info-meta" style="font-size: 0.78rem; color: var(--text-secondary); border-bottom:1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 0.5rem;">Created by Creator on Date</p>
+          
+          <div>
+            <h3 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.75rem; color: white;"><i class="fa-solid fa-users"></i> Members List</h3>
+            <ul id="group-info-members-list" style="list-style: none; display: flex; flex-direction: column; gap: 0.65rem; max-height: 220px; overflow-y: auto; padding-right: 0.25rem; margin: 0;">
+              <!-- Dynamic members list with Kick / Make Admin options -->
+            </ul>
+          </div>
+          
+          <!-- Admin: Add Member Section -->
+          <div id="group-info-add-member-section" class="hidden">
+            <h3 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.5rem; color: white;"><i class="fa-solid fa-user-plus"></i> Add New Member</h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <select id="group-info-add-member-select" style="flex: 1; padding: 0.65rem 1rem; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; outline: none; cursor: pointer;">
+                <!-- Populate eligible contacts -->
+              </select>
+              <button class="btn btn-primary btn-sm" id="group-info-add-member-btn" style="padding: 0.5rem 1rem;">Add</button>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+            <button id="group-leave-btn" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer;">Leave Group</button>
+            <button id="group-delete-btn" class="btn btn-sm btn-primary" style="background: #ef4444; border: none; color: white; border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer;">Delete Group</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Socket.io library and Frontend JavaScript -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
