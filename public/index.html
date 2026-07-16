@@ -43,6 +43,7 @@
         </div>
         <div class="error-msg" id="login-error"></div>
         <button type="submit" class="btn btn-primary">Log In</button>
+        <p class="switch-form-text" style="margin-top: 0.5rem; font-size: 0.85rem;"><span class="toggle-link" onclick="switchForm('forgot')">Forgot Password?</span></p>
         <p class="switch-form-text">Don't have an account? <span class="toggle-link" onclick="switchForm('register')">Sign Up</span></p>
       </form>
 
@@ -61,9 +62,84 @@
           <label for="register-confirm-password"><i class="fa-solid fa-check-double"></i> Confirm Password</label>
           <input type="password" id="register-confirm-password" placeholder="Confirm your password" required minlength="6" autocomplete="new-password">
         </div>
+        
+        <!-- Security Questions -->
+        <div class="input-group">
+          <label for="register-q1"><i class="fa-solid fa-question"></i> Security Question 1</label>
+          <select id="register-q1" required class="select-field">
+            <option value="" disabled selected>Select a question</option>
+            <option value="school">What was the name of your first school?</option>
+            <option value="pet">What is the name of your first pet?</option>
+            <option value="city">In what city were you born?</option>
+            <option value="color">What is your favorite color?</option>
+          </select>
+          <input type="text" id="register-a1" placeholder="Your answer" required style="margin-top: 0.5rem;">
+        </div>
+
+        <div class="input-group">
+          <label for="register-q2"><i class="fa-solid fa-question"></i> Security Question 2</label>
+          <select id="register-q2" required class="select-field">
+            <option value="" disabled selected>Select a question</option>
+            <option value="book">What is your favorite book?</option>
+            <option value="food">What is your favorite food?</option>
+            <option value="hobby">What is your childhood nickname?</option>
+            <option value="job">What was your dream job as a child?</option>
+          </select>
+          <input type="text" id="register-a2" placeholder="Your answer" required style="margin-top: 0.5rem;">
+        </div>
+
         <div class="error-msg" id="register-error"></div>
         <button type="submit" class="btn btn-primary">Sign Up</button>
         <p class="switch-form-text">Already have an account? <span class="toggle-link" onclick="switchForm('login')">Log In</span></p>
+      </form>
+
+      <!-- Forgot Password Form -->
+      <form id="forgot-form" class="auth-form">
+        <h2>Reset Password</h2>
+        
+        <!-- Step 1: Enter Username -->
+        <div id="forgot-step-1">
+          <div class="input-group">
+            <label for="forgot-username"><i class="fa-solid fa-user"></i> Username</label>
+            <input type="text" id="forgot-username" placeholder="Enter your username" required>
+          </div>
+          <div class="error-msg" id="forgot-error-1"></div>
+          <button type="button" class="btn btn-primary" id="forgot-next-btn">Next</button>
+        </div>
+
+        <!-- Step 2: Answer Security Questions -->
+        <div id="forgot-step-2" class="hidden">
+          <p class="form-info-text" style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.4;">Please answer your security questions to verify your identity.</p>
+          
+          <div class="input-group">
+            <label id="forgot-q1-label" style="font-weight: 500; font-size: 0.85rem;"></label>
+            <input type="text" id="forgot-a1" placeholder="Your answer" required>
+          </div>
+          
+          <div class="input-group">
+            <label id="forgot-q2-label" style="font-weight: 500; font-size: 0.85rem;"></label>
+            <input type="text" id="forgot-a2" placeholder="Your answer" required>
+          </div>
+          
+          <div class="error-msg" id="forgot-error-2"></div>
+          <button type="button" class="btn btn-primary" id="forgot-verify-btn">Verify Answers</button>
+        </div>
+
+        <!-- Step 3: Set New Password -->
+        <div id="forgot-step-3" class="hidden">
+          <div class="input-group">
+            <label for="forgot-new-password"><i class="fa-solid fa-lock"></i> New Password</label>
+            <input type="password" id="forgot-new-password" placeholder="Enter new password (min 6 chars)" required minlength="6">
+          </div>
+          <div class="input-group">
+            <label for="forgot-confirm-new-password"><i class="fa-solid fa-check-double"></i> Confirm New Password</label>
+            <input type="password" id="forgot-confirm-new-password" placeholder="Confirm new password" required minlength="6">
+          </div>
+          <div class="error-msg" id="forgot-error-3"></div>
+          <button type="submit" class="btn btn-primary" id="forgot-reset-btn">Reset Password</button>
+        </div>
+
+        <p class="switch-form-text">Back to <span class="toggle-link" onclick="switchForm('login')">Log In</span></p>
       </form>
     </div>
 

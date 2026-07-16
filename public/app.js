@@ -76,6 +76,10 @@ const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
 const loginError = document.getElementById('login-error');
 const registerError = document.getElementById('register-error');
+const forgotForm = document.getElementById('forgot-form');
+const forgotError1 = document.getElementById('forgot-error-1');
+const forgotError2 = document.getElementById('forgot-error-2');
+const forgotError3 = document.getElementById('forgot-error-3');
 const currentUserDisplay = document.getElementById('current-user-display');
 const currentUserAvatar = document.getElementById('current-user-avatar');
 const usersList = document.getElementById('users-list');
@@ -240,6 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
   loginForm.addEventListener('submit', handleLogin);
   registerForm.addEventListener('submit', handleRegister);
   messageForm.addEventListener('submit', handleSendMessage);
+  
+  // Forgot Password Steps listeners
+  document.getElementById('forgot-next-btn').addEventListener('click', handleForgotStep1);
+  document.getElementById('forgot-verify-btn').addEventListener('click', handleForgotStep2);
+  forgotForm.addEventListener('submit', handleForgotStep3);
   
   // Mobile Back Button
   mobileBackBtn.addEventListener('click', () => {
@@ -458,15 +467,34 @@ function showChatWorkspace() {
 function switchForm(formType) {
   loginError.textContent = '';
   registerError.textContent = '';
+  if (forgotError1) forgotError1.textContent = '';
+  if (forgotError2) forgotError2.textContent = '';
+  if (forgotError3) forgotError3.textContent = '';
+
   loginForm.reset();
   registerForm.reset();
+  if (forgotForm) forgotForm.reset();
+
+  // Reset forgot steps visibility
+  const forgotStep1 = document.getElementById('forgot-step-1');
+  const forgotStep2 = document.getElementById('forgot-step-2');
+  const forgotStep3 = document.getElementById('forgot-step-3');
+  if (forgotStep1) forgotStep1.classList.remove('hidden');
+  if (forgotStep2) forgotStep2.classList.add('hidden');
+  if (forgotStep3) forgotStep3.classList.add('hidden');
 
   if (formType === 'login') {
     loginForm.classList.add('active');
     registerForm.classList.remove('active');
-  } else {
+    forgotForm.classList.remove('active');
+  } else if (formType === 'register') {
     loginForm.classList.remove('active');
     registerForm.classList.add('active');
+    forgotForm.classList.remove('active');
+  } else if (formType === 'forgot') {
+    loginForm.classList.remove('active');
+    registerForm.classList.remove('active');
+    forgotForm.classList.add('active');
   }
 }
 
@@ -517,8 +545,18 @@ async function handleRegister(e) {
   const password = document.getElementById('register-password').value;
   const confirmPassword = document.getElementById('register-confirm-password').value;
 
+  const securityQuestion1 = document.getElementById('register-q1').value;
+  const securityAnswer1 = document.getElementById('register-a1').value.trim();
+  const securityQuestion2 = document.getElementById('register-q2').value;
+  const securityAnswer2 = document.getElementById('register-a2').value.trim();
+
   if (password !== confirmPassword) {
     registerError.textContent = 'Passwords do not match';
+    return;
+  }
+
+  if (!securityQuestion1 || !securityAnswer1 || !securityQuestion2 || !securityAnswer2) {
+    registerError.textContent = 'Please select and answer all security questions';
     return;
   }
 
@@ -526,7 +564,14 @@ async function handleRegister(e) {
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ 
+        username, 
+        password,
+        securityQuestion1,
+        securityAnswer1,
+        securityQuestion2,
+        securityAnswer2
+      })
     });
 
     const data = await res.json();
@@ -538,6 +583,109 @@ async function handleRegister(e) {
     switchForm('login');
   } catch (err) {
     registerError.textContent = err.message;
+  }
+}
+
+/* --- API HANDLERS (FORGOT PASSWORD) --- */
+let forgotUsername = '';
+let forgotAnswer1 = '';
+let forgotAnswer2 = '';
+
+async function handleForgotStep1() {
+  forgotError1.textContent = '';
+  const username = document.getElementById('forgot-username').value.trim();
+  if (!username) {
+    forgotError1.textContent = 'Username is required';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/forgot/questions?username=${encodeURIComponent(username)}`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'User verification failed');
+    }
+
+    forgotUsername = username;
+    
+    // Set question labels
+    document.getElementById('forgot-q1-label').textContent = data.q1;
+    document.getElementById('forgot-q2-label').textContent = data.q2;
+
+    // Transition UI
+    document.getElementById('forgot-step-1').classList.add('hidden');
+    document.getElementById('forgot-step-2').classList.remove('hidden');
+  } catch (err) {
+    forgotError1.textContent = err.message;
+  }
+}
+
+async function handleForgotStep2() {
+  forgotError2.textContent = '';
+  const answer1 = document.getElementById('forgot-a1').value.trim();
+  const answer2 = document.getElementById('forgot-a2').value.trim();
+
+  if (!answer1 || !answer2) {
+    forgotError2.textContent = 'Please answer both questions';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/forgot/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: forgotUsername, answer1, answer2 })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Verification failed');
+    }
+
+    forgotAnswer1 = answer1;
+    forgotAnswer2 = answer2;
+
+    // Transition UI
+    document.getElementById('forgot-step-2').classList.add('hidden');
+    document.getElementById('forgot-step-3').classList.remove('hidden');
+  } catch (err) {
+    forgotError2.textContent = err.message;
+  }
+}
+
+async function handleForgotStep3(e) {
+  e.preventDefault();
+  forgotError3.textContent = '';
+
+  const newPassword = document.getElementById('forgot-new-password').value;
+  const confirmNewPassword = document.getElementById('forgot-confirm-new-password').value;
+
+  if (newPassword !== confirmNewPassword) {
+    forgotError3.textContent = 'Passwords do not match';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/forgot/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: forgotUsername, 
+        answer1: forgotAnswer1, 
+        answer2: forgotAnswer2, 
+        newPassword 
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Password reset failed');
+    }
+
+    alert('Password reset successful! Please log in with your new password.');
+    switchForm('login');
+  } catch (err) {
+    forgotError3.textContent = err.message;
   }
 }
 

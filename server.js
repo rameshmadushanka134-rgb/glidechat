@@ -64,7 +64,11 @@ const userSchema = new mongoose.Schema({
   avatarUrl: { type: String, default: null },
   blockedUsers: [{ type: String }],
   incognito: { type: Boolean, default: false },
-  pushSubscriptions: { type: Array, default: [] }
+  pushSubscriptions: { type: Array, default: [] },
+  securityQuestion1: { type: String, default: null },
+  securityAnswerHash1: { type: String, default: null },
+  securityQuestion2: { type: String, default: null },
+  securityAnswerHash2: { type: String, default: null }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -520,19 +524,37 @@ app.post('/api/messages/clear', async (req, res) => {
   }
 });
 
+// Map for human-readable security questions
+const QUESTIONS_MAP = {
+  school: 'What was the name of your first school?',
+  pet: 'What is the name of your first pet?',
+  city: 'In what city were you born?',
+  color: 'What is your favorite color?',
+  book: 'What is your favorite book?',
+  food: 'What is your favorite food?',
+  hobby: 'What is your childhood nickname?',
+  job: 'What was your dream job as a child?'
+};
+
 // API: Register
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username and password are required' });
+  const { username, password, securityQuestion1, securityAnswer1, securityQuestion2, securityAnswer2 } = req.body;
+  if (!username || !password || !securityQuestion1 || !securityAnswer1 || !securityQuestion2 || !securityAnswer2) {
+    return res.status(400).json({ error: 'All fields, including security questions and answers, are required' });
+  }
 
   const cleanUsername = username.trim().toLowerCase();
   if (cleanUsername.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters long' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters long' });
 
   try {
     const userExists = await User.findOne({ username: new RegExp('^' + cleanUsername + '$', 'i') });
     if (userExists) return res.status(400).json({ error: 'Username is already taken' });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const securityAnswerHash1 = await bcrypt.hash(securityAnswer1.trim().toLowerCase(), 10);
+    const securityAnswerHash2 = await bcrypt.hash(securityAnswer2.trim().toLowerCase(), 10);
+
     await User.create({
       username: username.trim(),
       passwordHash,
@@ -540,9 +562,104 @@ app.post('/api/register', async (req, res) => {
       avatarUrl: null,
       incognito: false,
       blockedUsers: [],
-      pushSubscriptions: []
+      pushSubscriptions: [],
+      securityQuestion1,
+      securityAnswerHash1,
+      securityQuestion2,
+      securityAnswerHash2
     });
     res.status(201).json({ message: 'Registration successful' });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Forgot Password - Get Security Questions
+app.get('/api/forgot/questions', async (req, res) => {
+  const { username } = req.query;
+  if (!username) return res.status(400).json({ error: 'Username is required' });
+
+  const cleanUsername = username.trim().toLowerCase();
+  try {
+    const user = await User.findOne({ username: new RegExp('^' + cleanUsername + '$', 'i') });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.securityQuestion1 || !user.securityQuestion2) {
+      return res.status(400).json({ 
+        error: 'This account does not have security questions configured. Please contact the administrator.' 
+      });
+    }
+
+    const q1Text = QUESTIONS_MAP[user.securityQuestion1] || user.securityQuestion1;
+    const q2Text = QUESTIONS_MAP[user.securityQuestion2] || user.securityQuestion2;
+
+    res.json({ q1: q1Text, q2: q2Text });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Forgot Password - Verify Answers
+app.post('/api/forgot/verify', async (req, res) => {
+  const { username, answer1, answer2 } = req.body;
+  if (!username || !answer1 || !answer2) {
+    return res.status(400).json({ error: 'Username and both answers are required' });
+  }
+
+  const cleanUsername = username.trim().toLowerCase();
+  try {
+    const user = await User.findOne({ username: new RegExp('^' + cleanUsername + '$', 'i') });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.securityAnswerHash1 || !user.securityAnswerHash2) {
+      return res.status(400).json({ error: 'Security questions are not configured for this user' });
+    }
+
+    const isMatch1 = await bcrypt.compare(answer1.trim().toLowerCase(), user.securityAnswerHash1);
+    const isMatch2 = await bcrypt.compare(answer2.trim().toLowerCase(), user.securityAnswerHash2);
+
+    if (!isMatch1 || !isMatch2) {
+      return res.status(400).json({ error: 'Incorrect answers. Please try again.' });
+    }
+
+    res.json({ success: true, message: 'Answers verified successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Forgot Password - Reset Password
+app.post('/api/forgot/reset', async (req, res) => {
+  const { username, answer1, answer2, newPassword } = req.body;
+  if (!username || !answer1 || !answer2 || !newPassword) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  const cleanUsername = username.trim().toLowerCase();
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+  }
+
+  try {
+    const user = await User.findOne({ username: new RegExp('^' + cleanUsername + '$', 'i') });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (!user.securityAnswerHash1 || !user.securityAnswerHash2) {
+      return res.status(400).json({ error: 'Security questions are not configured for this user' });
+    }
+
+    const isMatch1 = await bcrypt.compare(answer1.trim().toLowerCase(), user.securityAnswerHash1);
+    const isMatch2 = await bcrypt.compare(answer2.trim().toLowerCase(), user.securityAnswerHash2);
+
+    if (!isMatch1 || !isMatch2) {
+      return res.status(400).json({ error: 'Verification failed. Incorrect answers.' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = passwordHash;
+    await user.save();
+
+    res.json({ success: true, message: 'Password has been reset successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
