@@ -1028,6 +1028,37 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// API: Get users with whom this user has active chat history
+app.get('/api/chats/active', async (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+
+  try {
+    const messages = await Message.find({
+      $or: [
+        { sender: new RegExp('^' + username + '$', 'i') },
+        { receiver: new RegExp('^' + username + '$', 'i') }
+      ]
+    }).select('sender receiver timestamp').sort({ timestamp: -1 });
+
+    const activeSet = new Set();
+    messages.forEach(msg => {
+      if (msg.sender && msg.sender.toLowerCase() !== username.toLowerCase()) {
+        activeSet.add(msg.sender.toLowerCase());
+      }
+      if (msg.receiver && msg.receiver.toLowerCase() !== username.toLowerCase()) {
+        activeSet.add(msg.receiver.toLowerCase());
+      }
+    });
+
+    res.json(Array.from(activeSet));
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // API: Get message history
 app.get('/api/messages', async (req, res) => {
   const { sender, receiver, requestor } = req.query;

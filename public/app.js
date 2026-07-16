@@ -5,6 +5,7 @@ let socket;
 let currentUser = null;
 let activeChat = null; // 'group', a username, or null if no active chat
 let registeredUsers = [];
+let activeConversations = [];
 const unreadCounts = new Map();
 const typingTimers = new Map();
 
@@ -274,6 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Search filter for user contacts
   searchUsersInput.addEventListener('input', renderUsersList);
 
+  // Start Chat button
+  const startChatBtn = document.getElementById('start-chat-btn');
+  if (startChatBtn) {
+    startChatBtn.addEventListener('click', openNewChatModal);
+  }
+
   // Emoji Popover toggle
   emojiBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -479,6 +486,12 @@ function showChatWorkspace() {
 
   currentUserDisplay.textContent = currentUser.username;
   updateAvatarDisplay(currentUserAvatar, currentUser.username, currentUser.avatarUrl);
+
+  // Current user avatar DP zoom
+  currentUserAvatar.onclick = (e) => {
+    e.stopPropagation();
+    zoomDP(currentUser.username);
+  };
 
   // Load wallpaper settings
   const storedWallpaper = localStorage.getItem('chat_wallpaper') || 'classic';
@@ -2091,6 +2104,13 @@ function initSocket() {
 
   socket.on('private_message', (msg) => {
     const otherUser = msg.sender.toLowerCase() === currentUser.username.toLowerCase() ? msg.receiver : msg.sender;
+    
+    // Auto add to active thread list if not present
+    if (!activeConversations.includes(otherUser.toLowerCase())) {
+      activeConversations.push(otherUser.toLowerCase());
+      renderUsersList();
+    }
+
     const previewText = msg.file ? `📎 [File] ${msg.file.name}` : msg.text;
     updateSidebarPreview(otherUser, `${msg.sender}: ${previewText}`);
 
@@ -2416,6 +2436,7 @@ async function fetchUsers() {
     registeredUsers = data.filter(
       u => u.username.toLowerCase() !== currentUser.username.toLowerCase()
     );
+    await fetchActiveConversations();
     renderUsersList();
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -2456,16 +2477,35 @@ function renderUsersList() {
   const searchQuery = searchUsersInput.value.toLowerCase().trim();
   usersList.innerHTML = '';
 
-  const filteredUsers = registeredUsers.filter(u => 
-    u.username.toLowerCase().includes(searchQuery)
-  );
+  const pinnedList = getPinnedChats();
+
+  const filteredUsers = registeredUsers.filter(u => {
+    const isMatched = u.username.toLowerCase().includes(searchQuery);
+    const hasHistory = activeConversations.includes(u.username.toLowerCase());
+    const isPinned = pinnedList.includes(u.username.toLowerCase());
+    const isActive = activeChat && activeChat.toLowerCase() === u.username.toLowerCase();
+    return isMatched && (hasHistory || isPinned || isActive);
+  });
 
   if (filteredUsers.length === 0) {
-    usersList.innerHTML = `<li class="tab-title" style="text-align:center; padding: 1.5rem 0;">No contacts found</li>`;
+    if (searchQuery) {
+      usersList.innerHTML = `<li class="tab-title" style="text-align:center; padding: 1.5rem 0;">No contacts found</li>`;
+    } else {
+      usersList.innerHTML = `
+        <li style="text-align:center; padding: 1.5rem 1rem; color: var(--text-secondary); font-size: 0.85rem; pointer-events: none;">
+          No active chats.<br>Click the <i class="fa-solid fa-message-medical" style="color: var(--accent-primary); margin: 0 2px;"></i> icon above to start a conversation!
+        </li>
+      `;
+    }
     return;
   }
 
   filteredUsers.sort((a, b) => {
+    const isAPinned = pinnedList.includes(a.username.toLowerCase());
+    const isBPinned = pinnedList.includes(b.username.toLowerCase());
+    if (isAPinned && !isBPinned) return -1;
+    if (!isAPinned && isBPinned) return 1;
+
     if (a.online && !b.online) return -1;
     if (!a.online && b.online) return 1;
     return a.username.localeCompare(b.username);
@@ -2501,17 +2541,25 @@ function renderUsersList() {
     const avatarHtml = avatarUrl 
       ? `<img src="${avatarUrl}" alt="${username}">`
       : username.charAt(0).toUpperCase();
+
+    const isPinned = pinnedList.includes(username.toLowerCase());
+    const pinBadgeHtml = isPinned ? `<span class="chat-item-pin-badge"><i class="fa-solid fa-thumbtack"></i></span>` : '';
+    const pinBtnHtml = `<button class="chat-item-pin-btn ${isPinned ? 'pinned' : ''}" onclick="event.stopPropagation(); togglePinChat('${username}')" title="${isPinned ? 'Unpin Chat' : 'Pin Chat'}"><i class="fa-solid fa-thumbtack"></i></button>`;
     
     li.innerHTML = `
-      <div class="chat-avatar">
+      <div class="chat-avatar" onclick="event.stopPropagation(); zoomDP('${username}')" title="Click to view profile picture">
         ${avatarHtml}
         <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
       </div>
-      <div class="chat-details">
-        <span class="chat-name">${username}</span>
+      <div class="chat-details" style="padding-right: 1.8rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span class="chat-name">${username}</span>
+          ${pinBadgeHtml}
+        </div>
         <span class="chat-preview" id="preview-${username.toLowerCase()}">${statusText}</span>
       </div>
       ${badgeHtml}
+      ${pinBtnHtml}
     `;
     usersList.appendChild(li);
   });
@@ -2524,6 +2572,14 @@ function selectChat(target) {
   typingTimers.clear();
 
   activeChat = target;
+
+  // Active chat avatar DP zoom
+  activeChatAvatar.onclick = (e) => {
+    e.stopPropagation();
+    if (target !== 'group' && !target.startsWith('group_')) {
+      zoomDP(target);
+    }
+  };
 
   updateHeaderBlockButton(target);
 
@@ -4038,4 +4094,142 @@ function insertEmoji(emoji) {
   messageInput.value += emoji;
   emojiPicker.classList.add('hidden');
   messageInput.focus();
+}
+
+/* --- CHAT PINNING & DIRECTORY HELPERS --- */
+function getPinnedChats() {
+  if (!currentUser) return [];
+  const stored = localStorage.getItem(`pinned_chats_${currentUser.username}`);
+  return stored ? JSON.parse(stored) : [];
+}
+
+window.togglePinChat = function(username) {
+  const pinnedList = getPinnedChats();
+  const index = pinnedList.indexOf(username.toLowerCase());
+  if (index === -1) {
+    pinnedList.push(username.toLowerCase());
+  } else {
+    pinnedList.splice(index, 1);
+  }
+  localStorage.setItem(`pinned_chats_${currentUser.username}`, JSON.stringify(pinnedList));
+  renderUsersList();
+}
+
+window.zoomDP = function(username) {
+  let user;
+  if (username === currentUser.username) {
+    user = currentUser;
+  } else {
+    user = registeredUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+  }
+
+  const modal = document.getElementById('dp-zoom-modal');
+  const title = document.getElementById('dp-zoom-title');
+  const container = document.getElementById('dp-zoom-img-container');
+
+  if (!modal || !title || !container) return;
+
+  title.textContent = user ? user.username : username;
+  
+  const avatarUrl = user ? user.avatarUrl : null;
+  if (avatarUrl) {
+    container.innerHTML = `<img src="${avatarUrl}" alt="${username}">`;
+  } else {
+    const initial = (user ? user.username : username).charAt(0).toUpperCase();
+    container.innerHTML = `<div class="avatar-initial">${initial}</div>`;
+  }
+
+  modal.classList.remove('hidden');
+}
+
+window.closeDPZoom = function() {
+  const modal = document.getElementById('dp-zoom-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function fetchActiveConversations() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(`/api/chats/active?username=${currentUser.username}`);
+    activeConversations = await res.json();
+  } catch (e) {
+    console.error('Error fetching active conversations:', e);
+  }
+}
+
+window.openNewChatModal = function() {
+  const modal = document.getElementById('new-chat-modal');
+  const searchInput = document.getElementById('new-chat-search');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+    filterNewChatUsers();
+  }
+}
+
+window.closeNewChatModal = function() {
+  const modal = document.getElementById('new-chat-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+window.filterNewChatUsers = function() {
+  const searchQuery = document.getElementById('new-chat-search').value.toLowerCase().trim();
+  const listEl = document.getElementById('new-chat-users-list');
+  listEl.innerHTML = '';
+
+  const matched = registeredUsers.filter(u => 
+    u.username.toLowerCase().includes(searchQuery)
+  );
+
+  if (matched.length === 0) {
+    listEl.innerHTML = `<li style="text-align: center; padding: 1rem; color: var(--text-secondary); font-size: 0.85rem;">No contacts found</li>`;
+    return;
+  }
+
+  matched.sort((a, b) => {
+    if (a.online && !b.online) return -1;
+    if (!a.online && b.online) return 1;
+    return a.username.localeCompare(b.username);
+  });
+
+  matched.forEach(user => {
+    const username = user.username;
+    const avatarUrl = user.avatarUrl || null;
+    const isOnline = user.online;
+    
+    const avatarHtml = avatarUrl 
+      ? `<img src="${avatarUrl}" alt="${username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
+      : `<div class="avatar-initial" style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; color: white;">${username.charAt(0).toUpperCase()}</div>`;
+
+    const li = document.createElement('li');
+    li.className = 'chat-item';
+    li.style.padding = '0.65rem 0.75rem';
+    li.style.borderRadius = '12px';
+    li.style.display = 'flex';
+    li.style.alignItems = 'center';
+    li.style.gap = '0.75rem';
+    li.style.cursor = 'pointer';
+    
+    li.innerHTML = `
+      <div style="position: relative;">
+        ${avatarHtml}
+        <span class="status-dot ${isOnline ? 'online' : 'offline'}" style="position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #111019;"></span>
+      </div>
+      <span style="font-weight: 600; font-size: 0.9rem; color: white;">${username}</span>
+    `;
+
+    li.addEventListener('click', () => {
+      if (!activeConversations.includes(username.toLowerCase())) {
+        activeConversations.push(username.toLowerCase());
+      }
+      closeNewChatModal();
+      selectChat(username);
+      renderUsersList();
+    });
+
+    listEl.appendChild(li);
+  });
 }

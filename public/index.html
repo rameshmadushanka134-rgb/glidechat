@@ -202,7 +202,10 @@
             <!-- Dynamically populated custom groups -->
           </ul>
 
-          <div class="tab-title">Direct Messages</div>
+          <div class="tab-title" style="display: flex; justify-content: space-between; align-items: center; padding-right: 1.5rem;">
+            <span>Direct Messages</span>
+            <button id="start-chat-btn" title="Start New Chat" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; transition: var(--transition-fast); padding: 2px;"><i class="fa-solid fa-message-medical"></i></button>
+          </div>
           <ul class="chat-list" id="users-list">
             <!-- Dynamically populated users list -->
           </ul>
@@ -765,6 +768,36 @@
             <button id="group-leave-btn" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer;">Leave Group</button>
             <button id="group-delete-btn" class="btn btn-sm btn-primary" style="background: #ef4444; border: none; color: white; border-radius: 8px; padding: 0.4rem 1rem; cursor: pointer;">Delete Group</button>
           </div>
+        </div>
+      </div>
+    <!-- 8. START CONVERSATION MODAL -->
+    <div id="new-chat-modal" class="modal-overlay hidden">
+      <div class="modal-card" style="max-width: 400px; padding: 1.5rem; border-radius: 20px;">
+        <button class="modal-close" onclick="closeNewChatModal()" title="Close"><i class="fa-solid fa-xmark"></i></button>
+        <header class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: white; margin: 0;"><i class="fa-solid fa-message-medical" style="color: var(--accent-primary); margin-right: 0.5rem;"></i> Start Conversation</h2>
+        </header>
+        <div class="sidebar-search" style="padding: 0; margin-bottom: 1rem;">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="new-chat-search" placeholder="Search contacts..." oninput="filterNewChatUsers()">
+          </div>
+        </div>
+        <ul class="chat-list" id="new-chat-users-list" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; padding: 0; margin: 0;">
+          <!-- Dynamically populated users -->
+        </ul>
+      </div>
+    </div>
+
+    <!-- 9. DP ZOOM MODAL -->
+    <div id="dp-zoom-modal" class="modal-overlay hidden" style="z-index: 2000; background: rgba(10, 10, 15, 0.95);" onclick="closeDPZoom()">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 1rem;" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; width: 100%; max-width: 320px; align-items: center; padding: 0 0.5rem;">
+          <h3 id="dp-zoom-title" style="color: white; margin: 0; font-size: 1.15rem; font-weight: 600;">Username</h3>
+          <button onclick="closeDPZoom()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="dp-zoom-img-container" style="width: 320px; height: 320px; border-radius: 24px; overflow: hidden; border: 2px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; background: #111019;">
+          <!-- Large DP Render -->
         </div>
       </div>
     </div>
