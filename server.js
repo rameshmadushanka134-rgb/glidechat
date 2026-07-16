@@ -7,6 +7,33 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const webpush = require('web-push');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
+
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+
+// HMAC Token signing and verification helpers (custom secure token)
+function generateToken(username) {
+  const expiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  const payload = JSON.stringify({ username, expiry });
+  const base64Payload = Buffer.from(payload).toString('base64');
+  const signature = crypto.createHmac('sha256', JWT_SECRET).update(base64Payload).digest('base64');
+  return `${base64Payload}.${signature}`;
+}
+
+function verifyToken(token) {
+  try {
+    if (!token) return null;
+    const [base64Payload, signature] = token.split('.');
+    if (!base64Payload || !signature) return null;
+    const expectedSignature = crypto.createHmac('sha256', JWT_SECRET).update(base64Payload).digest('base64');
+    if (signature !== expectedSignature) return null;
+    const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString('utf8'));
+    if (Date.now() > payload.expiry) return null;
+    return payload.username;
+  } catch (e) {
+    return null;
+  }
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -678,7 +705,7 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(400).json({ error: 'Invalid username or password' });
 
-    const token = `token_${user.username}_${Date.now()}`;
+    const token = generateToken(user.username);
     res.json({
       username: user.username,
       token,
@@ -1266,10 +1293,21 @@ io.on('connection', (socket) => {
   let authenticatedUser = null;
 
   // Authenticate socket connection
-  socket.on('authenticate', async ({ username }) => {
-    if (!username) return;
+  socket.on('authenticate', async ({ username, token }) => {
+    if (!username || !token) {
+      console.warn(`Unauthenticated connection attempt or missing parameters`);
+      socket.disconnect();
+      return;
+    }
 
     try {
+      const verifiedUsername = verifyToken(token);
+      if (!verifiedUsername || verifiedUsername.toLowerCase() !== username.toLowerCase()) {
+        console.error(`Socket authentication failed for user: ${username}`);
+        socket.disconnect();
+        return;
+      }
+
       const user = await User.findOne({ username: new RegExp('^' + username + '$', 'i') });
       authenticatedUser = username;
       onlineUsers.set(username, socket.id);

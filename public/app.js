@@ -844,7 +844,7 @@ async function handleAvatarUpload(e) {
     fetchStatuses();
 
     if (socket) {
-      socket.emit('authenticate', { username: currentUser.username });
+      socket.emit('authenticate', { username: currentUser.username, token: currentUser.token });
     }
 
     alert('Profile picture updated successfully!');
@@ -1936,7 +1936,7 @@ function initSocket() {
   socket = io();
 
   socket.on('connect', () => {
-    socket.emit('authenticate', { username: currentUser.username });
+    socket.emit('authenticate', { username: currentUser.username, token: currentUser.token });
   });
 
   socket.on('user_status_change', ({ username, online }) => {
