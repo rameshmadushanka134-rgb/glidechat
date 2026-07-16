@@ -2825,5 +2825,52 @@ input:checked + .slider:before {
   transition: background 0.4s ease;
 }
 
+/* Temporarily hide voice and video calls */
+#header-voice-call-btn,
+#header-video-call-btn {
+  display: none !important;
+}
+
+/* Dropdown styling for disappearing messages */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #141122;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.5rem;
+  width: 160px;
+  z-index: 100;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.dropdown-menu.hidden {
+  display: none !important;
+}
+.dropdown-item {
+  background: none;
+  border: none;
+  color: white;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+}
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--accent-primary);
+}
+.dropdown-item.active {
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  font-weight: bold;
+}
+
 
 

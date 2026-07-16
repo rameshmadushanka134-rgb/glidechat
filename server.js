@@ -124,7 +124,8 @@ const messageSchema = new mongoose.Schema({
     size: { type: Number }
   },
   deletedFor: [{ type: String }],
-  isDeletedForEveryone: { type: Boolean, default: false }
+  isDeletedForEveryone: { type: Boolean, default: false },
+  expiresAt: { type: Date, index: true }
 });
 const Message = mongoose.model('Message', messageSchema);
 
@@ -1556,7 +1557,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle incoming private message
-  socket.on('private_message', async ({ to, text, file }) => {
+  socket.on('private_message', async ({ to, text, file, disappearDuration }) => {
     if (!authenticatedUser || !to) return;
     if (!text && !file) return;
 
@@ -1580,13 +1581,19 @@ io.on('connection', (socket) => {
       const isRecipientOnline = onlineUsers.has(to);
       const messageStatus = isRecipientOnline ? 'delivered' : 'sent';
 
+      let duration = disappearDuration;
+      if (typeof duration !== 'number' || duration <= 0) {
+        duration = 30 * 24 * 60 * 60; // 30 days default
+      }
+
       const messageObj = {
         id: `msg_${Date.now()}_${Math.round(Math.random() * 1000000)}`,
         sender: authenticatedUser,
         receiver: to,
         text: text ? text.trim() : '',
         status: messageStatus,
-        timestamp: new Date()
+        timestamp: new Date(),
+        expiresAt: new Date(Date.now() + duration * 1000)
       };
 
       if (file) {
@@ -1642,7 +1649,7 @@ io.on('connection', (socket) => {
   });
 
   // Handle incoming group message
-  socket.on('group_message', async ({ to, text, file }) => {
+  socket.on('group_message', async ({ to, text, file, disappearDuration }) => {
     if (!authenticatedUser) return;
     if (!text && !file) return;
 
@@ -1658,12 +1665,18 @@ io.on('connection', (socket) => {
         }
       }
 
+      let duration = disappearDuration;
+      if (typeof duration !== 'number' || duration <= 0) {
+        duration = 30 * 24 * 60 * 60; // 30 days default
+      }
+
       const messageObj = {
         id: `msg_${Date.now()}_${Math.round(Math.random() * 1000000)}`,
         sender: authenticatedUser,
         receiver: targetRoom,
         text: text ? text.trim() : '',
-        timestamp: new Date()
+        timestamp: new Date(),
+        expiresAt: new Date(Date.now() + duration * 1000)
       };
 
       if (file) {
@@ -1808,6 +1821,23 @@ mongoose.connect(MONGODB_URI)
     
     // Run automated zero-data-loss migration from local JSON databases
     await runDataMigration();
+
+    // Migration: ensure all existing messages have expiresAt set (default to 30 days from timestamp)
+    try {
+      const messagesWithoutExpiry = await Message.find({ expiresAt: { $exists: false } });
+      let migratedCount = 0;
+      for (const msg of messagesWithoutExpiry) {
+        const originalTime = msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now();
+        msg.expiresAt = new Date(originalTime + 30 * 24 * 60 * 60 * 1000);
+        await msg.save();
+        migratedCount++;
+      }
+      if (migratedCount > 0) {
+        console.log(`[Migration] Configured expiresAt for ${migratedCount} messages.`);
+      }
+    } catch (err) {
+      console.error('[Migration] Error setting default message expiration:', err);
+    }
     
     // Periodically clean up expired statuses (WhatsApp-style stories) every hour
     setInterval(async () => {
@@ -1821,18 +1851,91 @@ mongoose.connect(MONGODB_URI)
       }
     }, 60 * 60 * 1000);
 
-    // Periodically clean up public group messages older than 24 hours every hour
+    // Periodically clean up expired messages and their files every 10 minutes
+    setInterval(async () => {
+      try {
+        const expiredMessages = await Message.find({ expiresAt: { $lt: new Date() } });
+        let fileDeleteCount = 0;
+        for (const msg of expiredMessages) {
+          if (msg.file && msg.file.url) {
+            const relativePath = msg.file.url.replace('/uploads/files/', '');
+            const fullPath = path.join(__dirname, 'public', 'uploads', 'files', relativePath);
+            if (fs.existsSync(fullPath)) {
+              try {
+                fs.unlinkSync(fullPath);
+                fileDeleteCount++;
+              } catch (e) {
+                console.error(`Failed to delete expired file: ${fullPath}`, e);
+              }
+            }
+          }
+          await Message.deleteOne({ _id: msg._id });
+        }
+        if (expiredMessages.length > 0) {
+          console.log(`[Cleanup] Deleted ${expiredMessages.length} expired messages (deleted ${fileDeleteCount} files).`);
+        }
+      } catch (err) {
+        console.error('[Cleanup] Message cleanup error:', err);
+      }
+    }, 10 * 60 * 1000);
+
+    // Periodically clean up public group messages and files older than 24 hours every hour
     setInterval(async () => {
       try {
         const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const result = await Message.deleteMany({ receiver: 'group', timestamp: { $lt: cutoff } });
-        if (result.deletedCount > 0) {
-          console.log(`[Public Group Cleanup] Removed ${result.deletedCount} expired messages.`);
+        const groupMessages = await Message.find({ receiver: 'group', timestamp: { $lt: cutoff } });
+        let fileDeleteCount = 0;
+        for (const msg of groupMessages) {
+          if (msg.file && msg.file.url) {
+            const relativePath = msg.file.url.replace('/uploads/files/', '');
+            const fullPath = path.join(__dirname, 'public', 'uploads', 'files', relativePath);
+            if (fs.existsSync(fullPath)) {
+              try {
+                fs.unlinkSync(fullPath);
+                fileDeleteCount++;
+              } catch (e) {
+                console.error(`Failed to delete group expired file: ${fullPath}`, e);
+              }
+            }
+          }
+          await Message.deleteOne({ _id: msg._id });
+        }
+        if (groupMessages.length > 0) {
+          console.log(`[Group Cleanup] Removed ${groupMessages.length} expired group messages (deleted ${fileDeleteCount} files).`);
         }
       } catch (err) {
-        console.error('[Public Group Cleanup] Error:', err);
+        console.error('[Group Cleanup] Error:', err);
       }
     }, 60 * 60 * 1000);
+
+    // Periodically clean up posts/reels and their files older than 30 days (every 12 hours)
+    setInterval(async () => {
+      try {
+        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const oldPosts = await Post.find({ timestamp: { $lt: cutoff } });
+        let fileDeleteCount = 0;
+        for (const post of oldPosts) {
+          if (post.media && post.media.url) {
+            const relativePath = post.media.url.replace('/uploads/files/', '');
+            const fullPath = path.join(__dirname, 'public', 'uploads', 'files', relativePath);
+            if (fs.existsSync(fullPath)) {
+              try {
+                fs.unlinkSync(fullPath);
+                fileDeleteCount++;
+              } catch (e) {
+                console.error(`Failed to delete expired post media: ${fullPath}`, e);
+              }
+            }
+          }
+          await Post.deleteOne({ _id: post._id });
+        }
+        if (oldPosts.length > 0) {
+          console.log(`[Post Cleanup] Removed ${oldPosts.length} posts older than 30 days (deleted ${fileDeleteCount} files).`);
+        }
+      } catch (err) {
+        console.error('[Post Cleanup] Error:', err);
+      }
+    }, 12 * 60 * 60 * 1000);
 
     // Run server listener
     server.listen(PORT, '0.0.0.0', () => {

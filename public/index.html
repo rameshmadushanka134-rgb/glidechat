@@ -220,6 +220,17 @@
             <span class="chat-status" id="active-chat-status">Everyone can read and send messages</span>
           </div>
           <div class="chat-header-actions" style="margin-left: auto; display: flex; align-items: center; gap: 0.35rem;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <button id="header-disappear-btn" class="header-action-btn" title="Disappearing Messages"><i class="fa-solid fa-clock"></i></button>
+              <div id="disappear-dropdown" class="dropdown-menu hidden" style="top: 110%; right: 0;">
+                <span style="font-size: 0.72rem; color: var(--text-secondary); padding: 0.25rem 0.5rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.04); margin-bottom: 0.25rem;">Disappearing Messages</span>
+                <button class="dropdown-item active" data-duration="0" onclick="setDisappearingMessages(0)">Off</button>
+                <button class="dropdown-item" data-duration="21600" onclick="setDisappearingMessages(21600)">6 Hours</button>
+                <button class="dropdown-item" data-duration="86400" onclick="setDisappearingMessages(86400)">24 Hours</button>
+                <button class="dropdown-item" data-duration="604800" onclick="setDisappearingMessages(604800)">7 Days</button>
+                <button class="dropdown-item" data-duration="2592000" onclick="setDisappearingMessages(2592000)">30 Days</button>
+              </div>
+            </div>
             <button id="header-group-info-btn" class="header-action-btn hidden" title="Group Settings"><i class="fa-solid fa-circle-info"></i></button>
             <button id="header-voice-call-btn" class="header-action-btn" title="Voice Call"><i class="fa-solid fa-phone"></i></button>
             <button id="header-video-call-btn" class="header-action-btn" title="Video Call"><i class="fa-solid fa-video"></i></button>

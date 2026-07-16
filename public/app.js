@@ -419,8 +419,20 @@ document.addEventListener('DOMContentLoaded', () => {
     switchSidebarNav('feed');
   });
   mobileBackFeedBtn.addEventListener('click', () => {
-    chatContainer.classList.remove('active-chat');
+    switchSidebarNav('chats');
   });
+
+  const disappearBtn = document.getElementById('header-disappear-btn');
+  const disappearDropdown = document.getElementById('disappear-dropdown');
+  if (disappearBtn && disappearDropdown) {
+    disappearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      disappearDropdown.classList.toggle('hidden');
+    });
+    document.addEventListener('click', () => {
+      disappearDropdown.classList.add('hidden');
+    });
+  }
 
   // Filter Buttons
   feedFilterAllBtn.addEventListener('click', () => {
@@ -971,6 +983,7 @@ async function handleFileAttachmentUpload(e) {
       }
     };
 
+    payload.disappearDuration = getActiveDisappearDuration();
     if (activeChat === 'group' || activeChat.startsWith('group_')) {
       payload.to = activeChat;
       socket.emit('group_message', payload);
@@ -2514,6 +2527,39 @@ function selectChat(target) {
 
   updateHeaderBlockButton(target);
 
+  // Update disappearing messages selector UI
+  const storedDuration = localStorage.getItem(`disappear_${currentUser.username}_${target}`);
+  const duration = storedDuration ? parseInt(storedDuration, 10) : 0;
+  
+  // Set active item in dropdown
+  document.querySelectorAll('#disappear-dropdown .dropdown-item').forEach(item => {
+    const itemDuration = parseInt(item.getAttribute('data-duration'), 10);
+    if (itemDuration === duration) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  const disappearBtn = document.getElementById('header-disappear-btn');
+  const disappearDropdown = document.getElementById('disappear-dropdown');
+  if (disappearDropdown) disappearDropdown.classList.add('hidden');
+
+  if (disappearBtn) {
+    if (target === 'group' || target.startsWith('group_')) {
+      disappearBtn.style.display = 'none';
+    } else {
+      disappearBtn.style.display = 'flex';
+      if (duration > 0) {
+        disappearBtn.style.color = 'var(--accent-primary)';
+        disappearBtn.title = `Disappearing Messages: ${formatDurationText(duration)}`;
+      } else {
+        disappearBtn.style.color = '';
+        disappearBtn.title = 'Disappearing Messages';
+      }
+    }
+  }
+
   headerGroupInfoBtn.classList.add('hidden');
 
   if (target === 'group') {
@@ -2705,10 +2751,11 @@ function handleSendMessage(e) {
   const text = messageInput.value.trim();
   if (!text) return;
 
+  const disappearDuration = getActiveDisappearDuration();
   if (activeChat === 'group' || activeChat.startsWith('group_')) {
-    socket.emit('group_message', { to: activeChat, text });
+    socket.emit('group_message', { to: activeChat, text, disappearDuration });
   } else {
-    socket.emit('private_message', { to: activeChat, text });
+    socket.emit('private_message', { to: activeChat, text, disappearDuration });
   }
 
   socket.emit('typing', { to: activeChat, isTyping: false });
@@ -3261,6 +3308,93 @@ function clearFeedComposerMedia() {
   feedComposerPreviewContainer.classList.add('hidden');
 }
 
+function uploadFileWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload', true);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        onProgress(percentComplete);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (e) {
+          resolve({ url: xhr.responseText });
+        }
+      } else {
+        try {
+          const errData = JSON.parse(xhr.responseText);
+          reject(new Error(errData.error || 'Upload failed'));
+        } catch (e) {
+          reject(new Error('Upload failed'));
+        }
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Network error during upload'));
+    };
+
+    const formData = new FormData();
+    formData.append('file', file);
+    xhr.send(formData);
+  });
+}
+
+function getActiveDisappearDuration() {
+  if (!activeChat || activeChat === 'group' || activeChat.startsWith('group_')) return 0;
+  const stored = localStorage.getItem(`disappear_${currentUser.username}_${activeChat}`);
+  return stored ? parseInt(stored, 10) : 0;
+}
+
+window.setDisappearingMessages = function(seconds) {
+  if (!activeChat) return;
+  
+  localStorage.setItem(`disappear_${currentUser.username}_${activeChat}`, seconds);
+  
+  // Update dropdown items active styling
+  document.querySelectorAll('#disappear-dropdown .dropdown-item').forEach(item => {
+    const itemDuration = parseInt(item.getAttribute('data-duration'), 10);
+    if (itemDuration === seconds) {
+      item.classList.add('active');
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  // Color highlight the clock button in header if > 0
+  const disappearBtn = document.getElementById('header-disappear-btn');
+  if (disappearBtn) {
+    if (seconds > 0) {
+      disappearBtn.style.color = 'var(--accent-primary)';
+      disappearBtn.title = `Disappearing Messages: ${formatDurationText(seconds)}`;
+    } else {
+      disappearBtn.style.color = '';
+      disappearBtn.title = 'Disappearing Messages';
+    }
+  }
+
+  // Close dropdown
+  const disappearDropdown = document.getElementById('disappear-dropdown');
+  if (disappearDropdown) {
+    disappearDropdown.classList.add('hidden');
+  }
+}
+
+function formatDurationText(seconds) {
+  if (seconds === 21600) return '6 Hours';
+  if (seconds === 86400) return '24 Hours';
+  if (seconds === 604800) return '7 Days';
+  if (seconds === 2592000) return '30 Days';
+  return 'Off';
+}
+
 async function handleFeedPostSubmit(e) {
   e.preventDefault();
   const text = feedComposerText.value.trim();
@@ -3277,18 +3411,10 @@ async function handleFeedPostSubmit(e) {
 
   try {
     if (composerAttachedFile) {
-      const formData = new FormData();
-      formData.append('file', composerAttachedFile);
-      
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
+      feedComposerSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading: 0%';
+      const fileMeta = await uploadFileWithProgress(composerAttachedFile, (percent) => {
+        feedComposerSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading: ${percent}%`;
       });
-      
-      const fileMeta = await uploadRes.json();
-      if (!uploadRes.ok) {
-        throw new Error(fileMeta.error || 'Failed to upload post attachment');
-      }
       
       media = {
         url: fileMeta.url,
