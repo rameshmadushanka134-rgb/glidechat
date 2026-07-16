@@ -261,9 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
     supportForm.addEventListener('submit', handleSendSupportTicket);
   }
   
-  // Mobile Back Button
+  // Mobile & Desktop Back Button
   mobileBackBtn.addEventListener('click', () => {
     chatContainer.classList.remove('active-chat');
+    chatContainer.classList.add('no-active-chat');
+    activeChat = null;
   });
 
   // Logout Button
@@ -465,6 +467,10 @@ function showChatWorkspace() {
 
   currentUserDisplay.textContent = currentUser.username;
   updateAvatarDisplay(currentUserAvatar, currentUser.username, currentUser.avatarUrl);
+
+  // Load wallpaper settings
+  const storedWallpaper = localStorage.getItem('chat_wallpaper') || 'classic';
+  setWallpaper(storedWallpaper);
 
   settingsBio.value = currentUser.bio || '';
   incognitoToggle.checked = !!currentUser.incognito;
@@ -775,6 +781,31 @@ function switchSettingsTab(tabName) {
     content.classList.remove('active');
   });
   document.getElementById(`settings-tab-${tabName}`).classList.add('active');
+}
+
+window.setWallpaper = function(wallName) {
+  document.querySelectorAll('.wallpaper-preset-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const targetBtn = document.getElementById(`wall-btn-${wallName}`);
+  if (targetBtn) {
+    targetBtn.classList.add('active');
+  }
+
+  const messagesDisplay = document.getElementById('messages-display');
+  if (messagesDisplay) {
+    if (wallName === 'classic') {
+      messagesDisplay.style.background = 'transparent';
+    } else if (wallName === 'sapphire') {
+      messagesDisplay.style.background = 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)';
+    } else if (wallName === 'emerald') {
+      messagesDisplay.style.background = 'radial-gradient(circle at center, #064e3b 0%, #022c22 100%)';
+    } else if (wallName === 'amethyst') {
+      messagesDisplay.style.background = 'radial-gradient(circle at center, #3b0764 0%, #0f051d 100%)';
+    }
+  }
+
+  localStorage.setItem('chat_wallpaper', wallName);
 }
 
 async function handleProfileUpdate(e) {

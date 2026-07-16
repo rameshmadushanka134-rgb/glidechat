@@ -235,9 +235,21 @@
         <div class="messages-container" id="messages-display">
           <!-- Welcome instructions, fallback if empty -->
           <div class="welcome-chat">
-            <i class="fa-solid fa-comments"></i>
-            <h3>Welcome to GlideChat!</h3>
-            <p>Start a secure conversation. Messages are delivered in real-time.</p>
+            <i class="fa-solid fa-compass welcome-logo"></i>
+            <h3>GlideChat Dashboard</h3>
+            <p>Start a secure end-to-end conversation or manage group spaces. Select an option below to get started immediately.</p>
+            <div class="dashboard-quick-actions">
+              <div class="quick-action-card" onclick="document.getElementById('create-group-btn').click()">
+                <i class="fa-solid fa-users"></i>
+                <span>Create Space</span>
+                <p>Create a custom group chat room</p>
+              </div>
+              <div class="quick-action-card" onclick="document.getElementById('settings-btn').click()">
+                <i class="fa-solid fa-palette"></i>
+                <span>UI Wallpaper</span>
+                <p>Customize your chat background</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -489,7 +501,20 @@
                   </button>
                 </div>
               </div>
-              
+
+              <div class="setting-item" style="margin-top: 1.5rem;">
+                <div class="setting-info">
+                  <span class="setting-title">Chat Wallpaper</span>
+                  <span class="setting-desc">Choose a custom background wallpaper for private and room chats</span>
+                </div>
+                <div class="wallpaper-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1rem;">
+                  <button type="button" class="wallpaper-preset-btn active" id="wall-btn-classic" onclick="setWallpaper('classic')" style="aspect-ratio: 16/10; border-radius: 8px; border: 2px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); cursor: pointer; transition: var(--transition-fast); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">Classic</button>
+                  <button type="button" class="wallpaper-preset-btn" id="wall-btn-sapphire" onclick="setWallpaper('sapphire')" style="aspect-ratio: 16/10; border-radius: 8px; border: 2px solid rgba(255,255,255,0.08); background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); cursor: pointer; transition: var(--transition-fast); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #60a5fa; font-weight: 600;">Sapphire</button>
+                  <button type="button" class="wallpaper-preset-btn" id="wall-btn-emerald" onclick="setWallpaper('emerald')" style="aspect-ratio: 16/10; border-radius: 8px; border: 2px solid rgba(255,255,255,0.08); background: radial-gradient(circle at center, #064e3b 0%, #022c22 100%); cursor: pointer; transition: var(--transition-fast); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #34d399; font-weight: 600;">Emerald</button>
+                  <button type="button" class="wallpaper-preset-btn" id="wall-btn-amethyst" onclick="setWallpaper('amethyst')" style="aspect-ratio: 16/10; border-radius: 8px; border: 2px solid rgba(255,255,255,0.08); background: radial-gradient(circle at center, #3b0764 0%, #0f051d 100%); cursor: pointer; transition: var(--transition-fast); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #c084fc; font-weight: 600;">Amethyst</button>
+                </div>
+              </div>
+
               <hr class="modal-divider">
               
               <h2>Notification Preferences</h2>

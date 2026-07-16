@@ -722,19 +722,24 @@ html, body {
 }
 
 .mobile-btn {
-  display: none;
+  display: block;
   background: transparent;
   border: none;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.5rem;
   margin-right: 0.25rem;
-  border-radius: 8px;
+  border-radius: 50%;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-btn:hover {
   background: rgba(255, 255, 255, 0.05);
+  color: white;
 }
 
 .active-chat-info {
@@ -771,25 +776,84 @@ html, body {
   height: 100%;
   text-align: center;
   color: var(--text-secondary);
-  gap: 0.75rem;
-  opacity: 0.65;
+  gap: 1.25rem;
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
-.welcome-chat i {
-  font-size: 3.5rem;
+.welcome-chat i.welcome-logo {
+  font-size: 4.5rem;
   background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: glowPulse 3s infinite ease-in-out;
 }
 
 .welcome-chat h3 {
-  font-size: 1.2rem;
-  color: var(--text-primary);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
 }
 
 .welcome-chat p {
-  max-width: 280px;
-  font-size: 0.85rem;
+  max-width: 420px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dashboard-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+  max-width: 450px;
+  margin-top: 1rem;
+}
+
+.quick-action-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  text-decoration: none;
+}
+
+.quick-action-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent-primary);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.quick-action-card i {
+  font-size: 1.5rem;
+  color: var(--accent-primary);
+  transition: var(--transition-fast);
+}
+
+.quick-action-card:hover i {
+  transform: scale(1.1);
+}
+
+.quick-action-card span {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.quick-action-card p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
 }
 
 /* Messages & Bubbles */
@@ -2677,5 +2741,89 @@ input:checked + .slider:before {
   color: white;
   padding: 0.5rem;
 }
+
+/* --- PREMIUM UI ANIMATIONS --- */
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Message items slide animation */
+.messages-container > div:not(.welcome-chat) {
+  animation: messageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Pulse animation for story avatars */
+@keyframes statusBorderPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(168, 85, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+.status-circle:hover {
+  animation: statusBorderPulse 1.5s infinite;
+}
+
+/* Smooth zoom transition for chat item selection */
+.chat-item {
+  transition: background var(--transition-fast), transform var(--transition-fast) !important;
+}
+.chat-item:active {
+  transform: scale(0.98);
+}
+
+/* Glowing animation for welcome screen logo */
+@keyframes glowPulse {
+  0% {
+    filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.7));
+  }
+  100% {
+    filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.4));
+  }
+}
+
+/* Wallpaper Presets Styles */
+.wallpaper-preset-btn {
+  position: relative;
+  overflow: hidden;
+  outline: none;
+}
+.wallpaper-preset-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.1);
+  opacity: 0;
+  transition: var(--transition-fast);
+}
+.wallpaper-preset-btn:hover::after {
+  opacity: 1;
+}
+.wallpaper-preset-btn.active {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+.messages-container {
+  background-size: cover;
+  background-position: center;
+  transition: background 0.4s ease;
+}
+
 
 
