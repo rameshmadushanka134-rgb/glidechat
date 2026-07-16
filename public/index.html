@@ -156,6 +156,10 @@
             </div>
           </div>
           <div class="header-actions">
+            <button id="public-chat-btn" title="Public Chat Room" onclick="selectChat('group')" style="position: relative;">
+              <i class="fa-solid fa-globe"></i>
+              <span id="public-badge" class="badge-dot hidden" style="position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
+            </button>
             <button id="settings-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
             <button id="logout-btn" title="Log Out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
           </div>
@@ -191,18 +195,11 @@
 
         <div class="chat-tabs-container">
           <div class="tab-title" style="display: flex; justify-content: space-between; align-items: center; padding-right: 1.5rem;">
-            <span>Rooms & Channels</span>
+            <span>Custom Spaces</span>
             <button id="create-group-btn" title="Create Custom Group" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; transition: var(--transition-fast); padding: 2px;"><i class="fa-solid fa-plus-circle"></i></button>
           </div>
           <ul class="chat-list" id="rooms-list">
-            <li class="chat-item active" id="chat-item-group" onclick="selectChat('group')">
-              <div class="chat-avatar group-avatar"><i class="fa-solid fa-users"></i></div>
-              <div class="chat-details">
-                <span class="chat-name">Public Group Room</span>
-                <span class="chat-preview" id="group-preview">Chat with everyone here</span>
-              </div>
-              <div class="badge hidden" id="badge-group">0</div>
-            </li>
+            <!-- Dynamically populated custom groups -->
           </ul>
 
           <div class="tab-title">Direct Messages</div>

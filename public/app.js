@@ -2522,9 +2522,14 @@ function selectChat(target) {
     activeChatAvatar.innerHTML = '<i class="fa-solid fa-users"></i>';
     activeChatAvatar.className = 'chat-avatar group-avatar';
     
-    document.getElementById('chat-item-group').classList.add('active');
+    const groupItem = document.getElementById('chat-item-group');
+    if (groupItem) groupItem.classList.add('active');
     unreadCounts.set('group', 0);
-    document.getElementById('badge-group').classList.add('hidden');
+    const groupBadge = document.getElementById('badge-group');
+    if (groupBadge) groupBadge.classList.add('hidden');
+    
+    const publicBadge = document.getElementById('public-badge');
+    if (publicBadge) publicBadge.classList.add('hidden');
 
     // Hide Calling buttons in group chats (private p2p calls only)
     headerVoiceCallBtn.classList.add('hidden');
@@ -2537,7 +2542,8 @@ function selectChat(target) {
     activeChatAvatar.innerHTML = '<i class="fa-solid fa-users-rectangle"></i>';
     activeChatAvatar.className = 'chat-avatar group-avatar';
     
-    document.getElementById('chat-item-group').classList.remove('active');
+    const groupItem = document.getElementById('chat-item-group');
+    if (groupItem) groupItem.classList.remove('active');
     
     unreadCounts.set(target, 0);
     const badge = document.getElementById(`badge-${target}`);
@@ -2559,7 +2565,8 @@ function selectChat(target) {
     updateAvatarDisplay(activeChatAvatar, target, avatarUrl);
     activeChatAvatar.className = 'chat-avatar';
     
-    document.getElementById('chat-item-group').classList.remove('active');
+    const groupItem = document.getElementById('chat-item-group');
+    if (groupItem) groupItem.classList.remove('active');
     
     unreadCounts.set(target.toLowerCase(), 0);
 
@@ -2735,6 +2742,10 @@ function incrementUnread(sender) {
       badge.textContent = count;
       badge.classList.remove('hidden');
     }
+    const publicBadge = document.getElementById('public-badge');
+    if (publicBadge) {
+      publicBadge.classList.remove('hidden');
+    }
   } else if (cleanSender.startsWith('group_')) {
     const badge = document.getElementById(`badge-${cleanSender}`);
     if (badge) {
@@ -2759,16 +2770,7 @@ async function fetchGroups() {
 }
 
 function renderRoomsList() {
-  let html = `
-    <li class="chat-item ${activeChat === 'group' ? 'active' : ''}" id="chat-item-group" onclick="selectChat('group')">
-      <div class="chat-avatar group-avatar"><i class="fa-solid fa-users"></i></div>
-      <div class="chat-details">
-        <span class="chat-name">Public Group Room</span>
-        <span class="chat-preview" id="group-preview">Chat with everyone here</span>
-      </div>
-      <div class="badge hidden" id="badge-group">0</div>
-    </li>
-  `;
+  let html = '';
 
   myGroups.forEach(g => {
     const unread = unreadCounts.get(g.id) || 0;
