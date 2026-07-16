@@ -414,6 +414,12 @@
               <li class="modal-nav-item" id="tab-nav-privacy" onclick="switchSettingsTab('privacy')">
                 <i class="fa-solid fa-shield-halved"></i> Privacy
               </li>
+              <li class="modal-nav-item" id="tab-nav-support" onclick="switchSettingsTab('support')">
+                <i class="fa-solid fa-headset"></i> Support
+              </li>
+              <li class="modal-nav-item hidden" id="tab-nav-admin" onclick="window.location.href='/admin.html'" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem; color: #a855f7;">
+                <i class="fa-solid fa-user-shield"></i> Admin Panel
+              </li>
             </ul>
           </aside>
           
@@ -530,6 +536,22 @@
                 <!-- Populate blocked list dynamically -->
                 <li class="no-blocked-users">No blocked contacts yet</li>
               </ul>
+            </section>
+            
+            <!-- Tab: Support -->
+            <section id="settings-tab-support" class="settings-tab-content">
+              <h2>Help & Support</h2>
+              <p class="setting-desc" style="margin-bottom: 1.5rem;">Have any issues, bugs, or feedback? Send a message directly to the GlideChat support team and administrators.</p>
+              
+              <form id="support-ticket-form" class="modal-form">
+                <div class="input-group">
+                  <label for="support-message-text"><i class="fa-solid fa-pen"></i> Message Details</label>
+                  <textarea id="support-message-text" rows="5" placeholder="Describe your issue or feedback in detail..." required style="width: 100%; min-height: 120px; padding: 0.85rem 1rem; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: white; font-size: 0.95rem; resize: vertical; outline: none; font-family: inherit; transition: var(--transition-fast);"></textarea>
+                </div>
+                <div class="error-msg" id="support-ticket-error"></div>
+                <div class="success-msg" id="support-ticket-success"></div>
+                <button type="submit" class="btn btn-primary btn-sm" id="support-ticket-submit-btn">Send Message</button>
+              </form>
             </section>
           </main>
         </div>

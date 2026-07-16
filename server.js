@@ -95,9 +95,19 @@ const userSchema = new mongoose.Schema({
   securityQuestion1: { type: String, default: null },
   securityAnswerHash1: { type: String, default: null },
   securityQuestion2: { type: String, default: null },
-  securityAnswerHash2: { type: String, default: null }
+  securityAnswerHash2: { type: String, default: null },
+  role: { type: String, default: 'user' }
 });
 const User = mongoose.model('User', userSchema);
+
+const supportMessageSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true, index: true },
+  sender: { type: String, required: true, index: true },
+  text: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now, index: true }
+});
+const SupportMessage = mongoose.model('SupportMessage', supportMessageSchema);
+
 
 const messageSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true, index: true },
@@ -593,7 +603,8 @@ app.post('/api/register', async (req, res) => {
       securityQuestion1,
       securityAnswerHash1,
       securityQuestion2,
-      securityAnswerHash2
+      securityAnswerHash2,
+      role: cleanUsername === 'admin' ? 'admin' : 'user'
     });
     res.status(201).json({ message: 'Registration successful' });
   } catch (err) {
@@ -713,8 +724,143 @@ app.post('/api/login', async (req, res) => {
       avatarUrl: user.avatarUrl || null,
       incognito: !!user.incognito,
       blockedUsers: user.blockedUsers || [],
-      pushSubscriptions: user.pushSubscriptions || []
+      pushSubscriptions: user.pushSubscriptions || [],
+      role: user.role || 'user'
     });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Middleware: Verify administrator role
+async function adminVerify(req, res, next) {
+  const authHeader = req.headers['authorization'] || req.body.token || req.query.token;
+  if (!authHeader) return res.status(401).json({ error: 'Authorization token is required' });
+
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  try {
+    const username = verifyToken(token);
+    if (!username) return res.status(401).json({ error: 'Invalid or expired token' });
+
+    const user = await User.findOne({ username: new RegExp('^' + username + '$', 'i') });
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied: Administrators only' });
+    }
+
+    req.adminUser = user;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// API: Verify Admin Token
+app.post('/api/admin/verify', adminVerify, (req, res) => {
+  res.json({ success: true, username: req.adminUser.username });
+});
+
+// API: Admin List Users
+app.get('/api/admin/users', adminVerify, async (req, res) => {
+  try {
+    const users = await User.find({}, 'username bio avatarUrl incognito role');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Admin Delete User Account
+app.delete('/api/admin/users/:username', adminVerify, async (req, res) => {
+  const usernameToDelete = req.params.username;
+  if (!usernameToDelete) return res.status(400).json({ error: 'Username is required' });
+
+  if (usernameToDelete.toLowerCase() === req.adminUser.username.toLowerCase()) {
+    return res.status(400).json({ error: 'You cannot delete your own administrator account' });
+  }
+
+  try {
+    const user = await User.findOne({ username: new RegExp('^' + usernameToDelete + '$', 'i') });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // 1. Delete user
+    await User.deleteOne({ _id: user._id });
+
+    // 2. Delete direct messages
+    await Message.deleteMany({
+      $or: [
+        { sender: new RegExp('^' + usernameToDelete + '$', 'i') },
+        { receiver: new RegExp('^' + usernameToDelete + '$', 'i') }
+      ]
+    });
+
+    // 3. Remove from groups
+    const groupsToUpdate = await Group.find({
+      $or: [
+        { members: new RegExp('^' + usernameToDelete + '$', 'i') },
+        { admins: new RegExp('^' + usernameToDelete + '$', 'i') }
+      ]
+    });
+
+    for (const g of groupsToUpdate) {
+      g.members = g.members.filter(m => m.toLowerCase() !== usernameToDelete.toLowerCase());
+      g.admins = g.admins.filter(a => a.toLowerCase() !== usernameToDelete.toLowerCase());
+      await g.save();
+    }
+
+    // 4. Disconnect active socket
+    const targetSocketId = onlineUsers.get(user.username);
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('force_logout');
+      onlineUsers.delete(user.username);
+      const socketToDisconnect = io.sockets.sockets.get(targetSocketId);
+      if (socketToDisconnect) socketToDisconnect.disconnect(true);
+    }
+
+    res.json({ success: true, message: `User ${user.username} deleted successfully` });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Send Support Ticket
+app.post('/api/support/send', async (req, res) => {
+  const { text, token } = req.body;
+  if (!text || !token) return res.status(400).json({ error: 'Text and token are required' });
+
+  try {
+    const username = verifyToken(token);
+    if (!username) return res.status(401).json({ error: 'Invalid or expired session' });
+
+    const ticketId = `ticket_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const newTicket = await SupportMessage.create({
+      id: ticketId,
+      sender: username,
+      text: text.trim()
+    });
+
+    res.json({ success: true, ticket: newTicket });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Admin List Support Tickets
+app.get('/api/support/list', adminVerify, async (req, res) => {
+  try {
+    const tickets = await SupportMessage.find({}).sort({ timestamp: -1 });
+    res.json(tickets);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Admin Delete/Resolve Support Ticket
+app.delete('/api/support/:id', adminVerify, async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+    const result = await SupportMessage.deleteOne({ id: ticketId });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Ticket not found' });
+    res.json({ success: true, message: 'Ticket resolved and deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }

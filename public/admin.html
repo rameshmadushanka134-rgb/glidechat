@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlideChat - Admin Dashboard</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Reused CSS Styles -->
+  <link rel="stylesheet" href="/style.css">
+  
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 50%, #1a162b 0%, #0d0a15 100%);
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    .admin-container {
+      width: 100%;
+      max-width: 1100px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-height: 80vh;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 1rem;
+    }
+
+    .admin-title-area h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .admin-title-area p {
+      margin: 0.25rem 0 0 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .admin-tabs {
+      display: flex;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.5rem;
+    }
+
+    .admin-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .admin-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: white;
+    }
+
+    .admin-tab-btn.active {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .admin-content-section {
+      display: none;
+      flex-direction: column;
+      gap: 1.25rem;
+      flex: 1;
+    }
+
+    .admin-content-section.active {
+      display: flex;
+    }
+
+    /* User Management Styles */
+    .search-filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .admin-search-box {
+      position: relative;
+      flex: 1;
+      max-width: 400px;
+    }
+
+    .admin-search-box i {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .admin-search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: white;
+      outline: none;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      transition: var(--transition-fast);
+    }
+
+    .admin-search-box input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .admin-table th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .admin-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+    }
+
+    .admin-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .admin-table tr:hover td {
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .user-row-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .user-row-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--gradient-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      overflow: hidden;
+    }
+
+    .user-row-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .role-badge.admin {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .role-badge.user {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-secondary);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Support Tickets list */
+    .tickets-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .ticket-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: var(--transition-fast);
+    }
+
+    .ticket-card:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.5rem;
+    }
+
+    .ticket-sender {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .ticket-date {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+    .ticket-body {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.85);
+      white-space: pre-wrap;
+    }
+
+    .ticket-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 0.25rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .empty-state h3 {
+      margin: 0 0 0.5rem 0;
+      color: white;
+    }
+
+    /* Verification screen */
+    .verify-overlay {
+      position: fixed;
+      inset: 0;
+      background: #0d0a15;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      z-index: 9999;
+    }
+
+    .verify-spinner {
+      width: 45px;
+      height: 45px;
+      border: 3.5px solid rgba(168, 85, 247, 0.15);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING VERIFICATION OVERLAY -->
+  <div id="verify-overlay" class="verify-overlay">
+    <div class="verify-spinner"></div>
+    <p style="font-weight: 500; font-size: 0.95rem; color: var(--text-secondary); letter-spacing: 0.5px;">Verifying Admin Session...</p>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD -->
+  <div class="admin-container">
+    <header class="admin-header">
+      <div class="admin-title-area">
+        <h1><i class="fa-solid fa-user-shield"></i> GlideChat Admin Panel</h1>
+        <p>Manage application users, support tickets, and configure platform settings.</p>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="window.location.href='/index.html'">
+        <i class="fa-solid fa-arrow-left"></i> Back to Chat
+      </button>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="admin-tabs">
+      <button class="admin-tab-btn active" id="tab-btn-users" onclick="switchTab('users')">
+        <i class="fa-solid fa-users-gear"></i> User Management
+      </button>
+      <button class="admin-tab-btn" id="tab-btn-support" onclick="switchTab('support')">
+        <i class="fa-solid fa-envelope-open-text"></i> Support Tickets <span class="badge hidden" id="support-count-badge">0</span>
+      </button>
+    </nav>
+
+    <!-- SECTION: USER MANAGEMENT -->
+    <section class="admin-content-section active" id="section-users">
+      <div class="search-filter-bar">
+        <div class="admin-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="user-search" placeholder="Search by username or bio..." oninput="filterUsers()">
+        </div>
+        <div id="users-count" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
+          Loading users count...
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>User Info</th>
+              <th>Bio</th>
+              <th>Role</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: SUPPORT TICKETS -->
+    <section class="admin-content-section" id="section-support">
+      <div class="tickets-container" id="tickets-list">
+        <!-- Dynamically populated ticket cards -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Admin Script File -->
+  <script src="/admin.js"></script>
+</body>
+</html>

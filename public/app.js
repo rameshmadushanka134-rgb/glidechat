@@ -80,6 +80,12 @@ const forgotForm = document.getElementById('forgot-form');
 const forgotError1 = document.getElementById('forgot-error-1');
 const forgotError2 = document.getElementById('forgot-error-2');
 const forgotError3 = document.getElementById('forgot-error-3');
+const supportForm = document.getElementById('support-ticket-form');
+const supportText = document.getElementById('support-message-text');
+const supportError = document.getElementById('support-ticket-error');
+const supportSuccess = document.getElementById('support-ticket-success');
+const supportSubmitBtn = document.getElementById('support-ticket-submit-btn');
+const tabNavAdmin = document.getElementById('tab-nav-admin');
 const currentUserDisplay = document.getElementById('current-user-display');
 const currentUserAvatar = document.getElementById('current-user-avatar');
 const usersList = document.getElementById('users-list');
@@ -249,6 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('forgot-next-btn').addEventListener('click', handleForgotStep1);
   document.getElementById('forgot-verify-btn').addEventListener('click', handleForgotStep2);
   forgotForm.addEventListener('submit', handleForgotStep3);
+
+  // Support Ticket submission
+  if (supportForm) {
+    supportForm.addEventListener('submit', handleSendSupportTicket);
+  }
   
   // Mobile Back Button
   mobileBackBtn.addEventListener('click', () => {
@@ -444,6 +455,13 @@ function showAuthScreen() {
 function showChatWorkspace() {
   authContainer.classList.add('hidden');
   chatContainer.classList.remove('hidden');
+
+  // Toggle Admin Panel visibility based on role
+  if (currentUser && currentUser.role === 'admin') {
+    tabNavAdmin.classList.remove('hidden');
+  } else {
+    tabNavAdmin.classList.add('hidden');
+  }
 
   currentUserDisplay.textContent = currentUser.username;
   updateAvatarDisplay(currentUserAvatar, currentUser.username, currentUser.avatarUrl);
@@ -686,6 +704,37 @@ async function handleForgotStep3(e) {
     switchForm('login');
   } catch (err) {
     forgotError3.textContent = err.message;
+  }
+}
+
+async function handleSendSupportTicket(e) {
+  e.preventDefault();
+  supportError.textContent = '';
+  supportSuccess.textContent = '';
+
+  const text = supportText.value.trim();
+  if (!text) return;
+
+  supportSubmitBtn.disabled = true;
+  supportSubmitBtn.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/api/support/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, token: currentUser.token })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to send support ticket');
+
+    supportSuccess.textContent = 'Support ticket sent successfully! Administrators will review your message.';
+    supportForm.reset();
+  } catch (err) {
+    supportError.textContent = err.message;
+  } finally {
+    supportSubmitBtn.disabled = false;
+    supportSubmitBtn.textContent = 'Send Message';
   }
 }
 
@@ -1937,6 +1986,11 @@ function initSocket() {
 
   socket.on('connect', () => {
     socket.emit('authenticate', { username: currentUser.username, token: currentUser.token });
+  });
+
+  socket.on('force_logout', () => {
+    alert('Your account has been deleted by the administrator.');
+    logout();
   });
 
   socket.on('user_status_change', ({ username, online }) => {
