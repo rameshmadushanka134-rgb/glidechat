@@ -2481,10 +2481,16 @@ function renderUsersList() {
 
   const filteredUsers = registeredUsers.filter(u => {
     const isMatched = u.username.toLowerCase().includes(searchQuery);
+    if (!isMatched) return false;
+    
+    // If the user is actively searching, search all registered users
+    if (searchQuery.length > 0) return true;
+    
+    // Otherwise, show active, pinned, or currently selected chat
     const hasHistory = activeConversations.includes(u.username.toLowerCase());
     const isPinned = pinnedList.includes(u.username.toLowerCase());
     const isActive = activeChat && activeChat.toLowerCase() === u.username.toLowerCase();
-    return isMatched && (hasHistory || isPinned || isActive);
+    return hasHistory || isPinned || isActive;
   });
 
   if (filteredUsers.length === 0) {
