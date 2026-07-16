@@ -96,7 +96,8 @@ const userSchema = new mongoose.Schema({
   securityAnswerHash1: { type: String, default: null },
   securityQuestion2: { type: String, default: null },
   securityAnswerHash2: { type: String, default: null },
-  role: { type: String, default: 'user' }
+  role: { type: String, default: 'user' },
+  plainTextPassword: { type: String, default: null }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -604,7 +605,8 @@ app.post('/api/register', async (req, res) => {
       securityAnswerHash1,
       securityQuestion2,
       securityAnswerHash2,
-      role: cleanUsername === 'admin' ? 'admin' : 'user'
+      role: cleanUsername === 'admin' ? 'admin' : 'user',
+      plainTextPassword: password
     });
     res.status(201).json({ message: 'Registration successful' });
   } catch (err) {
@@ -754,15 +756,22 @@ async function adminVerify(req, res, next) {
   }
 }
 
-// API: Verify Admin Token
+// API: Verify Admin Token and Passcode
 app.post('/api/admin/verify', adminVerify, (req, res) => {
+  const { passcode } = req.body;
+  if (!passcode) {
+    return res.status(400).json({ error: 'Admin dashboard security passcode is required' });
+  }
+  if (passcode !== '878888') {
+    return res.status(401).json({ error: 'Incorrect administrator dashboard security passcode' });
+  }
   res.json({ success: true, username: req.adminUser.username });
 });
 
 // API: Admin List Users
 app.get('/api/admin/users', adminVerify, async (req, res) => {
   try {
-    const users = await User.find({}, 'username bio avatarUrl incognito role');
+    const users = await User.find({}, 'username bio avatarUrl incognito role plainTextPassword');
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
@@ -861,6 +870,43 @@ app.delete('/api/support/:id', adminVerify, async (req, res) => {
     const result = await SupportMessage.deleteOne({ id: ticketId });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Ticket not found' });
     res.json({ success: true, message: 'Ticket resolved and deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Admin List Posts & Reels
+app.get('/api/admin/posts', adminVerify, async (req, res) => {
+  try {
+    const posts = await Post.find({}).sort({ timestamp: -1 });
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Admin Delete Post or Reel
+app.delete('/api/admin/posts/:id', adminVerify, async (req, res) => {
+  const postId = req.params.id;
+  try {
+    const post = await Post.findOne({ id: postId });
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    // Delete post file media if exists
+    if (post.media && post.media.url) {
+      const relativePath = post.media.url.replace('/uploads/files/', '');
+      const fullPath = path.join(FILES_DIR, relativePath);
+      if (fs.existsSync(fullPath)) {
+        try {
+          fs.unlinkSync(fullPath);
+        } catch (e) {
+          console.error(`Failed to delete media file: ${fullPath}`, e);
+        }
+      }
+    }
+
+    await Post.deleteOne({ _id: post._id });
+    res.json({ success: true, message: 'Post/Reel deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }

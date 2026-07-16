@@ -314,7 +314,7 @@
       color: white;
     }
 
-    /* Verification screen */
+    /* Verification / Passcode Gate screen */
     .verify-overlay {
       position: fixed;
       inset: 0;
@@ -336,6 +336,190 @@
       animation: spin 1s linear infinite;
     }
 
+    .passcode-box {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .passcode-box h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: white;
+      letter-spacing: 0.5px;
+    }
+
+    .passcode-box p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .passcode-input-group {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .passcode-input-group input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: white;
+      outline: none;
+      font-size: 1.1rem;
+      text-align: center;
+      letter-spacing: 4px;
+      box-sizing: border-box;
+    }
+
+    .passcode-input-group input:focus {
+      border-color: #a855f7;
+    }
+
+    .passcode-error {
+      color: #f87171;
+      font-size: 0.8rem;
+      text-align: center;
+      min-height: 1.2rem;
+    }
+
+    /* Details Modal Styles */
+    .admin-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .admin-modal-card {
+      width: 100%;
+      max-width: 600px;
+      background: #141122;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-height: 85vh;
+    }
+
+    .admin-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.75rem;
+    }
+
+    .admin-modal-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .admin-modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .admin-modal-close:hover {
+      color: white;
+    }
+
+    .admin-modal-body {
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .modal-section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #c084fc;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 0.25rem;
+    }
+
+    .modal-likes-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .modal-like-tag {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .modal-comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .modal-comment-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .modal-comment-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+    }
+
+    .modal-comment-author {
+      font-weight: 600;
+      color: white;
+    }
+
+    .modal-comment-date {
+      color: var(--text-secondary);
+    }
+
+    .modal-comment-text {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
@@ -343,10 +527,22 @@
 </head>
 <body>
 
-  <!-- LOADING VERIFICATION OVERLAY -->
+  <!-- LOADING VERIFICATION OVERLAY & PASSCODE PROMPT -->
   <div id="verify-overlay" class="verify-overlay">
-    <div class="verify-spinner"></div>
-    <p style="font-weight: 500; font-size: 0.95rem; color: var(--text-secondary); letter-spacing: 0.5px;">Verifying Admin Session...</p>
+    <div class="verify-spinner" id="verify-spinner"></div>
+    <p id="verify-text" style="font-weight: 500; font-size: 0.95rem; color: var(--text-secondary); letter-spacing: 0.5px;">Verifying Admin Session...</p>
+
+    <!-- Hidden by default until session token is validated -->
+    <div class="passcode-box hidden" id="passcode-box">
+      <h2><i class="fa-solid fa-key" style="color: #a855f7; margin-right: 0.5rem;"></i> Passcode Verification</h2>
+      <p>Please enter the permanent 6-digit administrator dashboard passcode to unlock management tools.</p>
+      
+      <form id="passcode-form" class="passcode-input-group">
+        <input type="password" id="passcode-input" placeholder="••••••" maxlength="6" autofocus required>
+        <div class="passcode-error" id="passcode-error"></div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Verify & Unlock</button>
+      </form>
+    </div>
   </div>
 
   <!-- MAIN ADMIN DASHBOARD -->
@@ -354,7 +550,7 @@
     <header class="admin-header">
       <div class="admin-title-area">
         <h1><i class="fa-solid fa-user-shield"></i> GlideChat Admin Panel</h1>
-        <p>Manage application users, support tickets, and configure platform settings.</p>
+        <p>Manage application users, support tickets, content streams, and passwords.</p>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="window.location.href='/index.html'">
         <i class="fa-solid fa-arrow-left"></i> Back to Chat
@@ -365,6 +561,9 @@
     <nav class="admin-tabs">
       <button class="admin-tab-btn active" id="tab-btn-users" onclick="switchTab('users')">
         <i class="fa-solid fa-users-gear"></i> User Management
+      </button>
+      <button class="admin-tab-btn" id="tab-btn-content" onclick="switchTab('content')">
+        <i class="fa-solid fa-photo-film"></i> Content Moderation
       </button>
       <button class="admin-tab-btn" id="tab-btn-support" onclick="switchTab('support')">
         <i class="fa-solid fa-envelope-open-text"></i> Support Tickets <span class="badge hidden" id="support-count-badge">0</span>
@@ -389,11 +588,43 @@
             <tr>
               <th>User Info</th>
               <th>Bio</th>
+              <th>Password (Plain)</th>
               <th>Role</th>
               <th style="text-align: right;">Actions</th>
             </tr>
           </thead>
           <tbody id="users-table-body">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION: CONTENT MODERATION -->
+    <section class="admin-content-section" id="section-content">
+      <div class="search-filter-bar">
+        <div class="admin-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="post-search" placeholder="Search posts by author or content..." oninput="filterPosts()">
+        </div>
+        <div id="posts-count" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">
+          Loading posts count...
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Creator</th>
+              <th>Post Content</th>
+              <th>Likes</th>
+              <th>Comments</th>
+              <th>Timestamp</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="posts-table-body">
             <!-- Dynamically populated rows -->
           </tbody>
         </table>
@@ -406,6 +637,30 @@
         <!-- Dynamically populated ticket cards -->
       </div>
     </section>
+  </div>
+
+  <!-- DETAILS MODAL (POPUP) -->
+  <div class="admin-modal-overlay hidden" id="details-modal">
+    <div class="admin-modal-card">
+      <div class="admin-modal-header">
+        <h3 id="modal-post-title">Post Interactions Details</h3>
+        <button class="admin-modal-close" onclick="closeDetailsModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="admin-modal-body">
+        <div>
+          <div class="modal-section-title">Likes (<span id="modal-likes-count">0</span>)</div>
+          <div class="modal-likes-list" id="modal-likes-list">
+            <!-- Dynamically populated list -->
+          </div>
+        </div>
+        <div>
+          <div class="modal-section-title">Comments (<span id="modal-comments-count">0</span>)</div>
+          <div class="modal-comments-list" id="modal-comments-list">
+            <!-- Dynamically populated list -->
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Admin Script File -->
