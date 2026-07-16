@@ -2708,12 +2708,12 @@ input:checked + .slider:before {
 }
 
 /* Hide header and footer when no chat is active */
-.chat-workspace.no-active-chat .chat-header,
-.chat-workspace.no-active-chat .chat-footer {
+.chat-workspace.no-active-chat #chat-main .chat-header,
+.chat-workspace.no-active-chat #chat-main .chat-footer {
   display: none !important;
 }
 
-.chat-workspace.no-active-chat .messages-container {
+.chat-workspace.no-active-chat #chat-main .messages-container {
   height: 100%;
 }
 
