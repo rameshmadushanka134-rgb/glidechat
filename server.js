@@ -605,7 +605,7 @@ app.post('/api/register', async (req, res) => {
       securityAnswerHash1,
       securityQuestion2,
       securityAnswerHash2,
-      role: cleanUsername === 'admin' ? 'admin' : 'user',
+      role: ['admin', 'admin1', 'admin2'].includes(cleanUsername) ? 'admin' : 'user',
       plainTextPassword: password
     });
     res.status(201).json({ message: 'Registration successful' });
@@ -1791,6 +1791,20 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/glidec
 mongoose.connect(MONGODB_URI)
   .then(async () => {
     console.log('Successfully connected to MongoDB!');
+    
+    // Promote default admin usernames to admin role if they exist
+    try {
+      const adminUsernames = ['admin', 'admin1', 'admin2'];
+      const result = await User.updateMany(
+        { username: { $in: adminUsernames.map(name => new RegExp('^' + name + '$', 'i')) } },
+        { $set: { role: 'admin' } }
+      );
+      if (result.modifiedCount > 0) {
+        console.log(`[Admin Promotion] Promoted ${result.modifiedCount} accounts to admin.`);
+      }
+    } catch (e) {
+      console.error('[Admin Promotion] Error promoting admin accounts:', e);
+    }
     
     // Run automated zero-data-loss migration from local JSON databases
     await runDataMigration();
