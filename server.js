@@ -135,6 +135,7 @@ const groupSchema = new mongoose.Schema({
   members: [{ type: String }],
   admins: [{ type: String }],
   creator: { type: String, required: true },
+  avatarUrl: { type: String, default: null },
   timestamp: { type: Date, default: Date.now }
 });
 const Group = mongoose.model('Group', groupSchema);
@@ -1155,7 +1156,7 @@ app.get('/api/groups', async (req, res) => {
 });
 // API: Create new custom group
 app.post('/api/groups', async (req, res) => {
-  const { name, creator, members } = req.body;
+  const { name, creator, members, avatarUrl } = req.body;
   if (!name || !creator || !members || !Array.isArray(members)) {
     return res.status(400).json({ error: 'Missing parameters' });
   }
@@ -1174,7 +1175,8 @@ app.post('/api/groups', async (req, res) => {
       name: cleanName,
       creator: creator,
       admins: [creator],
-      members: uniqueMembers
+      members: uniqueMembers,
+      avatarUrl: avatarUrl || null
     });
 
     // Notify online members to join the room in socket
@@ -1190,6 +1192,32 @@ app.post('/api/groups', async (req, res) => {
 
     io.emit('group_created', newGroup);
     res.status(201).json(newGroup);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API: Update group avatar/DP
+app.post('/api/groups/avatar', async (req, res) => {
+  const { groupId, avatarBase64 } = req.body;
+  if (!groupId || !avatarBase64) {
+    return res.status(400).json({ error: 'Group ID and avatar Base64 are required' });
+  }
+
+  try {
+    const group = await Group.findOne({ id: groupId });
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    group.avatarUrl = avatarBase64;
+    await group.save();
+
+    // Broadcast the group avatar update to all connected clients
+    io.emit('group_avatar_update', { groupId, avatarUrl: avatarBase64 });
+
+    res.json({
+      message: 'Group avatar updated successfully',
+      avatarUrl: avatarBase64
+    });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }

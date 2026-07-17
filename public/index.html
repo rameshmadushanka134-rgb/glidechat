@@ -719,6 +719,13 @@
           <h2 style="font-size: 1.25rem; font-weight:600; margin-bottom: 1.25rem; border-bottom:1px solid var(--border-color); padding-bottom: 0.5rem; color: white;"><i class="fa-solid fa-users-rectangle"></i> Create New Group</h2>
           
           <form id="group-create-form" style="display:flex; flex-direction:column; gap:1.25rem;">
+            
+            <div class="avatar-upload-container" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <div class="avatar avatar-large" id="group-create-avatar-preview" style="width: 80px; height: 80px; border-radius: 50%; font-size: 2rem; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%); overflow: hidden; border: 2px solid rgba(255,255,255,0.15);">G</div>
+              <input type="file" id="group-create-avatar-input" accept="image/*" class="hidden" onchange="handleGroupCreateAvatarSelect(event)">
+              <button type="button" class="btn btn-sm" style="background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.85rem; cursor: pointer; border-radius: 8px; font-size: 0.8rem;" onclick="document.getElementById('group-create-avatar-input').click()"><i class="fa-solid fa-camera"></i> Group Photo</button>
+            </div>
+
             <div class="input-group">
               <label for="group-name-input" style="color: var(--text-secondary); margin-bottom: 0.5rem; display: block; font-size: 0.85rem;"><i class="fa-solid fa-signature"></i> Group Name</label>
               <input type="text" id="group-name-input" placeholder="e.g. Project Team" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white;">
@@ -742,9 +749,18 @@
     <div id="group-info-modal" class="modal-overlay hidden" style="z-index: 250;">
       <div class="modal-card modal-card-sm" style="max-width: 460px; height: auto; max-height: 90vh; border-radius: 20px;">
         <button class="modal-close" id="close-group-info-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
-        <div style="padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem;">
-          <h2 id="group-info-name" style="font-size: 1.3rem; font-weight:700; margin-bottom: 0.25rem; color: white;">Group Name</h2>
-          <p id="group-info-meta" style="font-size: 0.78rem; color: var(--text-secondary); border-bottom:1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 0.5rem;">Created by Creator on Date</p>
+        <div style="padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; align-items: stretch;">
+          
+          <div class="avatar-upload-container" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <div class="avatar avatar-large" id="group-info-avatar-preview" style="width: 90px; height: 90px; border-radius: 50%; font-size: 2.25rem; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%); overflow: hidden; border: 2px solid rgba(255,255,255,0.15);">G</div>
+            <div id="group-avatar-upload-controls" class="hidden">
+              <input type="file" id="group-avatar-input" accept="image/*" class="hidden" onchange="handleGroupAvatarUpload(event)">
+              <button type="button" class="btn btn-sm" style="background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-color); color: white; padding: 0.35rem 0.85rem; cursor: pointer; border-radius: 8px; font-size: 0.8rem;" onclick="document.getElementById('group-avatar-input').click()"><i class="fa-solid fa-camera"></i> Change Group Photo</button>
+            </div>
+          </div>
+
+          <h2 id="group-info-name" style="font-size: 1.3rem; font-weight:700; margin-bottom: 0.25rem; color: white; text-align: center;">Group Name</h2>
+          <p id="group-info-meta" style="font-size: 0.78rem; color: var(--text-secondary); border-bottom:1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 0.5rem; text-align: center;">Created by Creator on Date</p>
           
           <div>
             <h3 style="font-size: 0.9rem; font-weight:600; margin-bottom: 0.75rem; color: white;"><i class="fa-solid fa-users"></i> Members List</h3>

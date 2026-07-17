@@ -6,6 +6,7 @@ let currentUser = null;
 let activeChat = null; // 'group', a username, or null if no active chat
 let registeredUsers = [];
 let activeConversations = [];
+let groupCreateAvatarBase64 = null;
 const unreadCounts = new Map();
 const typingTimers = new Map();
 
@@ -2193,6 +2194,17 @@ function initSocket() {
     }
   });
 
+  socket.on('group_avatar_update', ({ groupId, avatarUrl }) => {
+    const group = myGroups.find(g => g.id === groupId);
+    if (group) {
+      group.avatarUrl = avatarUrl;
+      renderRoomsList();
+      if (activeChat === groupId) {
+        selectChat(groupId);
+      }
+    }
+  });
+
   socket.on('group_deleted', ({ id }) => {
     myGroups = myGroups.filter(g => g.id !== id);
     renderRoomsList();
@@ -2650,8 +2662,19 @@ function selectChat(target) {
     const groupName = group ? group.name : 'Custom Group';
     activeChatTitle.textContent = groupName;
     activeChatStatus.textContent = group ? `${group.members.length} members` : 'Custom Group Chat';
-    activeChatAvatar.innerHTML = '<i class="fa-solid fa-users-rectangle"></i>';
-    activeChatAvatar.className = 'chat-avatar group-avatar';
+    
+    if (group && group.avatarUrl) {
+      activeChatAvatar.innerHTML = `<img src="${group.avatarUrl}" alt="${group.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      activeChatAvatar.className = 'chat-avatar';
+    } else {
+      activeChatAvatar.innerHTML = '<i class="fa-solid fa-users-rectangle"></i>';
+      activeChatAvatar.className = 'chat-avatar group-avatar';
+    }
+
+    activeChatAvatar.onclick = (e) => {
+      e.stopPropagation();
+      zoomGroupDP(target);
+    };
     
     const groupItem = document.getElementById('chat-item-group');
     if (groupItem) groupItem.classList.remove('active');
@@ -2888,9 +2911,15 @@ function renderRoomsList() {
     const unread = unreadCounts.get(g.id) || 0;
     const badgeHtml = unread > 0 ? `<div class="badge" id="badge-${g.id}">${unread}</div>` : `<div class="badge hidden" id="badge-${g.id}">0</div>`;
 
+    const avatarHtml = g.avatarUrl 
+      ? `<img src="${g.avatarUrl}" alt="${escapeHtml(g.name)}" style="width: 100%; height: 100%; object-fit: cover;">`
+      : `<i class="fa-solid fa-users-rectangle"></i>`;
+
     html += `
       <li class="chat-item ${activeChat === g.id ? 'active' : ''}" id="chat-item-${g.id}" onclick="selectChat('${g.id}')">
-        <div class="chat-avatar group-avatar"><i class="fa-solid fa-users-rectangle"></i></div>
+        <div class="chat-avatar group-avatar" onclick="event.stopPropagation(); zoomGroupDP('${g.id}')" title="Click to view group photo">
+          ${avatarHtml}
+        </div>
         <div class="chat-details">
           <span class="chat-name">${escapeHtml(g.name)}</span>
           <span class="chat-preview" id="preview-${g.id.toLowerCase()}">Custom Group Chat</span>
@@ -2906,6 +2935,9 @@ function renderRoomsList() {
 function openGroupCreator() {
   groupNameInput.value = '';
   groupCreateError.textContent = '';
+  groupCreateAvatarBase64 = null;
+  const preview = document.getElementById('group-create-avatar-preview');
+  if (preview) preview.textContent = 'G';
   
   groupMembersSelectList.innerHTML = '';
   if (registeredUsers.length === 0) {
@@ -2949,7 +2981,8 @@ async function handleGroupCreateSubmit(e) {
       body: JSON.stringify({
         name,
         creator: currentUser.username,
-        members
+        members,
+        avatarUrl: groupCreateAvatarBase64
       })
     });
 
@@ -2977,6 +3010,24 @@ function openGroupSettings() {
 
   const currentUserIsAdmin = group.admins.some(a => a.toLowerCase() === currentUser.username.toLowerCase());
   const currentUserIsCreator = group.createdBy.toLowerCase() === currentUser.username.toLowerCase();
+
+  const preview = document.getElementById('group-info-avatar-preview');
+  if (preview) {
+    if (group.avatarUrl) {
+      preview.innerHTML = `<img src="${group.avatarUrl}" alt="${group.name}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+      preview.innerHTML = group.name.charAt(0).toUpperCase();
+    }
+  }
+
+  const uploadControls = document.getElementById('group-avatar-upload-controls');
+  if (uploadControls) {
+    if (currentUserIsAdmin) {
+      uploadControls.classList.remove('hidden');
+    } else {
+      uploadControls.classList.add('hidden');
+    }
+  }
 
   groupInfoMembersList.innerHTML = '';
   group.members.forEach(member => {
@@ -4294,4 +4345,70 @@ function compressImageToBase64(file, maxWidth, maxHeight, quality) {
     };
     reader.onerror = (err) => reject(err);
   });
+}
+
+window.handleGroupCreateAvatarSelect = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const base64 = await compressImageToBase64(file, 150, 150, 0.85);
+    groupCreateAvatarBase64 = base64;
+    const preview = document.getElementById('group-create-avatar-preview');
+    if (preview) {
+      preview.innerHTML = `<img src="${base64}" alt="Group Preview" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+  } catch (err) {
+    alert('Error selecting group photo: ' + err.message);
+  }
+}
+
+window.handleGroupAvatarUpload = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const base64 = await compressImageToBase64(file, 150, 150, 0.85);
+    const res = await fetch('/api/groups/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        groupId: activeChat,
+        avatarBase64: base64
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update group photo');
+    
+    // Update preview immediately
+    const preview = document.getElementById('group-info-avatar-preview');
+    if (preview) {
+      preview.innerHTML = `<img src="${base64}" alt="Group Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    // Refresh groups list
+    await fetchGroups();
+    selectChat(activeChat);
+  } catch (err) {
+    alert('Error updating group photo: ' + err.message);
+  }
+}
+
+window.zoomGroupDP = function(groupId) {
+  const group = myGroups.find(g => g.id === groupId);
+  if (!group) return;
+
+  const modal = document.getElementById('dp-zoom-modal');
+  const title = document.getElementById('dp-zoom-title');
+  const container = document.getElementById('dp-zoom-img-container');
+
+  if (!modal || !title || !container) return;
+
+  title.textContent = group.name;
+  
+  if (group.avatarUrl) {
+    container.innerHTML = `<img src="${group.avatarUrl}" alt="${group.name}">`;
+  } else {
+    container.innerHTML = `<div class="avatar-initial">${group.name.charAt(0).toUpperCase()}</div>`;
+  }
+
+  modal.classList.remove('hidden');
 }
