@@ -341,15 +341,21 @@ app.post('/api/upload', uploadFile.single('file'), (req, res) => {
 
 // API: Avatar Upload Endpoint
 app.post('/api/settings/avatar', uploadAvatar.single('avatar'), async (req, res) => {
-  const { username } = req.body;
+  const { username, avatarBase64 } = req.body;
   if (!username) return res.status(400).json({ error: 'Username is required' });
-  if (!req.file) return res.status(400).json({ error: 'No image file uploaded' });
 
   try {
     const user = await User.findOne({ username: new RegExp('^' + username + '$', 'i') });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    if (avatarBase64) {
+      user.avatarUrl = avatarBase64;
+    } else if (req.file) {
+      user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    } else {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
     await user.save();
 
     res.json({

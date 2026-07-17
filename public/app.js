@@ -921,17 +921,20 @@ async function handleAvatarUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append('avatar', file);
-  formData.append('username', currentUser.username);
-
   try {
     uploadAvatarBtn.disabled = true;
     uploadAvatarBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
 
+    // Compress image to Base64 (max 150x150, jpeg quality 0.85)
+    const base64 = await compressImageToBase64(file, 150, 150, 0.85);
+
     const res = await fetch('/api/settings/avatar', {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: currentUser.username,
+        avatarBase64: base64
+      })
     });
 
     const data = await res.json();
@@ -3103,6 +3106,9 @@ window.handleGroupAdminAction = handleGroupAdminAction;
 /* --- DYNAMIC NEWS FEED & REELS HANDLERS (FACEBOOK STYLE) --- */
 function getUserAvatarUrl(username) {
   if (!username) return null;
+  if (currentUser && username.toLowerCase() === currentUser.username.toLowerCase()) {
+    return currentUser.avatarUrl;
+  }
   const user = registeredUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
   return user ? user.avatarUrl : null;
 }
@@ -3473,17 +3479,28 @@ async function handleFeedPostSubmit(e) {
 
   try {
     if (composerAttachedFile) {
-      feedComposerSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading: 0%';
-      const fileMeta = await uploadFileWithProgress(composerAttachedFile, (percent) => {
-        feedComposerSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading: ${percent}%`;
-      });
-      
-      media = {
-        url: fileMeta.url,
-        type: fileMeta.type,
-        name: fileMeta.name,
-        size: fileMeta.size
-      };
+      if (composerAttachedFile.type.startsWith('image/')) {
+        feedComposerSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compressing...';
+        const base64 = await compressImageToBase64(composerAttachedFile, 1080, 1080, 0.75);
+        media = {
+          url: base64,
+          type: composerAttachedFile.type,
+          name: composerAttachedFile.name,
+          size: composerAttachedFile.size
+        };
+      } else {
+        feedComposerSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading: 0%';
+        const fileMeta = await uploadFileWithProgress(composerAttachedFile, (percent) => {
+          feedComposerSubmitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading: ${percent}%`;
+        });
+        
+        media = {
+          url: fileMeta.url,
+          type: fileMeta.type,
+          name: fileMeta.name,
+          size: fileMeta.size
+        };
+      }
     }
 
     const postRes = await fetch('/api/posts', {
@@ -4237,5 +4254,44 @@ window.filterNewChatUsers = function() {
     });
 
     listEl.appendChild(li);
+  });
+}
+
+function compressImageToBase64(file, maxWidth, maxHeight, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
   });
 }
