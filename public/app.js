@@ -2522,7 +2522,7 @@ function renderUsersList() {
     const isOnline = user.online;
     const userBio = user.bio || '';
     const avatarUrl = user.avatarUrl || null;
-    const isActive = activeChat !== 'group' && activeChat.toLowerCase() === username.toLowerCase();
+    const isActive = activeChat && activeChat !== 'group' && activeChat.toLowerCase() === username.toLowerCase();
     
     const unread = unreadCounts.get(username.toLowerCase()) || 0;
     const badgeHtml = unread > 0 ? `<div class="badge" id="badge-${username.toLowerCase()}">${unread}</div>` : '';
