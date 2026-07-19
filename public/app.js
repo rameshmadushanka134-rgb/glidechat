@@ -107,6 +107,7 @@ const tabNavAdmin = document.getElementById('tab-nav-admin');
 const currentUserDisplay = document.getElementById('current-user-display');
 const currentUserAvatar = document.getElementById('current-user-avatar');
 const usersList = document.getElementById('users-list');
+const allUsersList = document.getElementById('all-users-list');
 const messagesDisplay = document.getElementById('messages-display');
 const messageForm = document.getElementById('message-form');
 const messageInput = document.getElementById('message-input');
@@ -288,7 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
   logoutBtn.addEventListener('click', logout);
 
   // Search filter for user contacts
-  searchUsersInput.addEventListener('input', renderUsersList);
+  searchUsersInput.addEventListener('input', () => {
+    renderUsersList();
+    renderAllUsersList();
+  });
 
   // Start Chat button
   const startChatBtn = document.getElementById('start-chat-btn');
@@ -1058,6 +1062,7 @@ async function toggleBlockUser(targetUsername, action) {
 
     renderBlockedList();
     renderUsersList();
+    renderAllUsersList();
     fetchStatuses();
     
     if (activeChat && activeChat.toLowerCase() === targetUsername.toLowerCase()) {
@@ -2078,6 +2083,7 @@ function initSocket() {
     }
     
     renderUsersList();
+    renderAllUsersList();
 
     if (activeChat && activeChat.toLowerCase() === username.toLowerCase()) {
       activeChatStatus.textContent = online ? 'Online' : 'Offline';
@@ -2094,6 +2100,7 @@ function initSocket() {
       user.online = lowerOnline.includes(user.username.toLowerCase());
     });
     renderUsersList();
+    renderAllUsersList();
   });
 
   socket.on('status_update', () => {
@@ -2126,6 +2133,7 @@ function initSocket() {
     if (!activeConversations.includes(otherUser.toLowerCase())) {
       activeConversations.push(otherUser.toLowerCase());
       renderUsersList();
+      renderAllUsersList();
     }
 
     const previewText = msg.file ? `📎 [File] ${msg.file.name}` : msg.text;
@@ -2478,6 +2486,7 @@ async function fetchUsers() {
     );
     await fetchActiveConversations();
     renderUsersList();
+    renderAllUsersList();
   } catch (err) {
     console.error('Error fetching users:', err);
   }
@@ -2610,6 +2619,65 @@ function renderUsersList() {
     usersList.appendChild(li);
   });
 }
+
+function renderAllUsersList() {
+  if (!allUsersList) return;
+  const searchQuery = searchUsersInput.value.toLowerCase().trim();
+  allUsersList.innerHTML = '';
+
+  const filteredUsers = registeredUsers.filter(u => {
+    return u.username.toLowerCase().includes(searchQuery);
+  });
+
+  if (filteredUsers.length === 0) {
+    allUsersList.innerHTML = `<li style="text-align:center; padding: 1.25rem 0; font-size: 0.82rem; color: var(--text-secondary); pointer-events: none;">No contacts found</li>`;
+    return;
+  }
+
+  filteredUsers.sort((a, b) => {
+    if (a.online && !b.online) return -1;
+    if (!a.online && b.online) return 1;
+    return a.username.localeCompare(b.username);
+  });
+
+  filteredUsers.forEach(user => {
+    const username = user.username;
+    const isOnline = user.online;
+    const userBio = user.bio || '';
+    const avatarUrl = user.avatarUrl || null;
+    const isActive = activeChat && activeChat !== 'group' && activeChat.toLowerCase() === username.toLowerCase();
+
+    let statusText = isOnline ? 'online' : 'offline';
+    if (userBio) statusText = userBio;
+
+    const isBlocked = currentUser.blockedUsers && currentUser.blockedUsers.some(
+      u => u.toLowerCase() === username.toLowerCase()
+    );
+    if (isBlocked) statusText = 'Blocked';
+
+    const li = document.createElement('li');
+    li.className = `chat-item ${isActive ? 'active' : ''}`;
+    li.setAttribute('onclick', `selectChat('${username}')`);
+    li.id = `all-user-item-${username.toLowerCase()}`;
+
+    const avatarHtml = avatarUrl 
+      ? `<img src="${avatarUrl}" alt="${username}">`
+      : username.charAt(0).toUpperCase();
+
+    li.innerHTML = `
+      <div class="chat-avatar" onclick="event.stopPropagation(); zoomDP('${username}')" title="Click to view profile picture">
+        ${avatarHtml}
+        <span class="status-dot ${isOnline ? 'online' : 'offline'}"></span>
+      </div>
+      <div class="chat-details">
+        <span class="chat-name">${username}</span>
+        <span class="chat-preview" id="all-preview-${username.toLowerCase()}">${statusText}</span>
+      </div>
+    `;
+    allUsersList.appendChild(li);
+  });
+}
+
 
 function selectChat(target) {
   chatContainer.classList.remove('no-active-chat');
@@ -2748,6 +2816,7 @@ function selectChat(target) {
   });
 
   renderUsersList();
+  renderAllUsersList();
   chatContainer.classList.add('active-chat');
   fetchChatHistory();
 }
@@ -2914,6 +2983,7 @@ function incrementUnread(sender) {
     }
   } else {
     renderUsersList();
+    renderAllUsersList();
   }
 }
 
@@ -4321,6 +4391,7 @@ window.filterNewChatUsers = function() {
       closeNewChatModal();
       selectChat(username);
       renderUsersList();
+      renderAllUsersList();
     });
 
     listEl.appendChild(li);

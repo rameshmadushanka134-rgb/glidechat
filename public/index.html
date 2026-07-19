@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- CSS Styling -->
-  <link rel="stylesheet" href="style.css?v=2.3">
+  <link rel="stylesheet" href="style.css?v=2.4">
   <!-- FontAwesome Icons for modern aesthetic -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
@@ -214,6 +214,13 @@
           </div>
           <ul class="chat-list" id="users-list">
             <!-- Dynamically populated users list -->
+          </ul>
+
+          <div class="tab-title" style="display: flex; justify-content: space-between; align-items: center; padding-right: 1.5rem; margin-top: 0.75rem;">
+            <span>All Users Directory</span>
+          </div>
+          <ul class="chat-list" id="all-users-list">
+            <!-- Dynamically populated all users list -->
           </ul>
         </div>
       </aside>
@@ -833,6 +840,6 @@
 
   <!-- Socket.io library and Frontend JavaScript -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="app.js?v=2.4"></script>
 </body>
 </html>
