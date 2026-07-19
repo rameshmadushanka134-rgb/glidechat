@@ -216,8 +216,7 @@ const feedMain = document.getElementById('feed-main');
 const chatMain = document.getElementById('chat-main');
 
 const mobileBackFeedBtn = document.getElementById('mobile-back-feed-btn');
-const feedFilterAllBtn = document.getElementById('feed-filter-all-btn');
-const feedFilterReelsBtn = document.getElementById('feed-filter-reels-btn');
+
 
 const feedComposerAvatar = document.getElementById('feed-composer-avatar');
 const feedComposerText = document.getElementById('feed-composer-text');
@@ -249,7 +248,6 @@ const profilePostsList = document.getElementById('profile-posts-list');
 
 let myGroups = [];
 let postsFeed = [];
-let activeFeedTab = 'all'; // 'all' or 'reels'
 let composerAttachedFile = null;
 let activeProfileUsername = null;
 let searchQuery = '';
@@ -458,13 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Filter Buttons
-  feedFilterAllBtn.addEventListener('click', () => {
-    switchFeedTab('all');
-  });
-  feedFilterReelsBtn.addEventListener('click', () => {
-    switchFeedTab('reels');
-  });
+
 
   // Composer listeners
   feedComposerFileBtn.addEventListener('click', () => feedComposerFileInput.click());
@@ -2247,9 +2239,7 @@ function initSocket() {
   socket.on('post_created', (post) => {
     if (!postsFeed.some(p => p.id === post.id)) {
       postsFeed.unshift(post);
-      if (activeFeedTab === 'all' || (activeFeedTab === 'reels' && post.media && post.media.type.startsWith('video/'))) {
-        renderPostsFeed();
-      }
+      renderPostsFeed();
     }
   });
 
@@ -3254,36 +3244,9 @@ function switchSidebarNav(tab) {
   }
 }
 
-function switchFeedTab(tab) {
-  activeFeedTab = tab;
-  if (tab === 'all') {
-    feedFilterAllBtn.className = 'btn btn-sm btn-primary';
-    feedFilterAllBtn.style.background = '';
-    feedFilterAllBtn.style.border = '';
-    feedFilterAllBtn.style.color = '';
-    
-    feedFilterReelsBtn.className = 'btn btn-sm';
-    feedFilterReelsBtn.style.background = 'none';
-    feedFilterReelsBtn.style.border = 'none';
-    feedFilterReelsBtn.style.color = 'var(--text-secondary)';
-  } else {
-    feedFilterReelsBtn.className = 'btn btn-sm btn-primary';
-    feedFilterReelsBtn.style.background = '';
-    feedFilterReelsBtn.style.border = '';
-    feedFilterReelsBtn.style.color = '';
-    
-    feedFilterAllBtn.className = 'btn btn-sm';
-    feedFilterAllBtn.style.background = 'none';
-    feedFilterAllBtn.style.border = 'none';
-    feedFilterAllBtn.style.color = 'var(--text-secondary)';
-  }
-  fetchPosts();
-}
-
 async function fetchPosts() {
-  const url = activeFeedTab === 'reels' ? '/api/posts?type=video' : '/api/posts';
   try {
-    const res = await fetch(url);
+    const res = await fetch('/api/posts');
     const data = await res.json();
     postsFeed = data;
     renderPostsFeed();
@@ -3307,8 +3270,8 @@ function renderPostsFeed(posts = postsFeed) {
       feedPostsDisplay.innerHTML = `
         <div class="post-card glass" style="text-align: center; padding: 2.5rem 1rem;">
           <i class="fa-solid fa-photo-film" style="font-size: 2.2rem; color: var(--text-muted); margin-bottom: 0.75rem;"></i>
-          <h3 style="color: white; font-size: 1.05rem;">No posts or reels yet</h3>
-          <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.25rem;">Be the first to share a post or video reel!</p>
+          <h3 style="color: white; font-size: 1.05rem;">No posts yet</h3>
+          <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 0.25rem;">Be the first to share a post!</p>
         </div>`;
     }
     return;
@@ -4101,7 +4064,7 @@ function renderProfilePosts(posts) {
   if (posts.length === 0) {
     profilePostsList.innerHTML = `
       <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1.5rem 0;">
-        No posts or reels shared by this user yet.
+        No posts shared by this user yet.
       </div>`;
     return;
   }
@@ -4121,7 +4084,7 @@ function renderProfilePosts(posts) {
       } else if (post.media.type.startsWith('video/')) {
         mediaHtml = `
           <div style="margin-top:8px; font-weight:600; font-size:0.75rem; color:var(--accent-secondary); display:flex; align-items:center; gap:4px;">
-            <i class="fa-solid fa-clapperboard"></i> Contains a video Reel
+            <i class="fa-solid fa-clapperboard"></i> Contains a video
           </div>`;
       }
     }
