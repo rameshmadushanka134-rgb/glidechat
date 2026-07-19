@@ -765,7 +765,17 @@
             </div>
           </div>
 
-          <h2 id="group-info-name" style="font-size: 1.3rem; font-weight:700; margin-bottom: 0.25rem; color: white; text-align: center;">Group Name</h2>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;">
+            <div id="group-info-name-display-container" style="display: flex; align-items: center; gap: 0.5rem; justify-content: center; width: 100%;">
+              <h2 id="group-info-name" style="font-size: 1.3rem; font-weight:700; color: white; margin: 0;">Group Name</h2>
+              <button id="group-name-edit-trigger" class="hidden" onclick="toggleGroupNameEdit(true)" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem;" title="Edit Name"><i class="fa-solid fa-pen-to-square"></i></button>
+            </div>
+            <div id="group-info-name-edit-container" class="hidden" style="display: flex; gap: 0.5rem; width: 100%; max-width: 320px; align-items: center;">
+              <input type="text" id="group-name-edit-input" style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white; outline: none; font-size: 0.95rem;">
+              <button class="btn btn-primary btn-sm" onclick="saveGroupName()" style="padding: 0.5rem 0.85rem;"><i class="fa-solid fa-check"></i></button>
+              <button class="btn btn-sm" onclick="toggleGroupNameEdit(false)" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: white; padding: 0.5rem 0.85rem;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </div>
           <p id="group-info-meta" style="font-size: 0.78rem; color: var(--text-secondary); border-bottom:1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 0.5rem; text-align: center;">Created by Creator on Date</p>
           
           <div>

@@ -3040,11 +3040,25 @@ function openGroupSettings() {
   if (!group) return;
 
   groupInfoName.textContent = group.name;
-  const date = new Date(group.createdAt).toLocaleDateString();
-  groupInfoMeta.textContent = `Created by ${group.createdBy} on ${date}`;
+  const date = new Date(group.timestamp || Date.now()).toLocaleDateString();
+  groupInfoMeta.textContent = `Created by ${group.creator || 'unknown'} on ${date}`;
 
-  const currentUserIsAdmin = group.admins.some(a => a.toLowerCase() === currentUser.username.toLowerCase());
-  const currentUserIsCreator = group.createdBy.toLowerCase() === currentUser.username.toLowerCase();
+  const currentUserIsAdmin = group.admins && group.admins.some(a => a.toLowerCase() === currentUser.username.toLowerCase());
+  const currentUserIsCreator = group.creator && group.creator.toLowerCase() === currentUser.username.toLowerCase();
+
+  // Reset rename UI containers
+  const editTrigger = document.getElementById('group-name-edit-trigger');
+  const editContainer = document.getElementById('group-info-name-edit-container');
+  const displayContainer = document.getElementById('group-info-name-display-container');
+  if (editTrigger) {
+    if (currentUserIsAdmin) {
+      editTrigger.classList.remove('hidden');
+    } else {
+      editTrigger.classList.add('hidden');
+    }
+  }
+  if (editContainer) editContainer.classList.add('hidden');
+  if (displayContainer) displayContainer.classList.remove('hidden');
 
   const preview = document.getElementById('group-info-avatar-preview');
   if (preview) {
@@ -4471,6 +4485,67 @@ window.deletePost = async function(postId, event) {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to delete post');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+window.toggleGroupNameEdit = function(show) {
+  const displayContainer = document.getElementById('group-info-name-display-container');
+  const editContainer = document.getElementById('group-info-name-edit-container');
+  const editInput = document.getElementById('group-name-edit-input');
+  const group = myGroups.find(g => g.id === activeChat);
+
+  if (!displayContainer || !editContainer || !editInput || !group) return;
+
+  if (show) {
+    displayContainer.classList.add('hidden');
+    editContainer.classList.remove('hidden');
+    editInput.value = group.name;
+    editInput.focus();
+  } else {
+    displayContainer.classList.remove('hidden');
+    editContainer.classList.add('hidden');
+  }
+}
+
+window.saveGroupName = async function() {
+  const editInput = document.getElementById('group-name-edit-input');
+  if (!editInput) return;
+
+  const newName = editInput.value.trim();
+  if (!newName) {
+    alert('Group name cannot be empty');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/groups/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        groupId: activeChat,
+        name: newName,
+        username: currentUser.username
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to rename group');
+
+    // Update active chat title if renamed group is current active chat
+    if (activeChat === data.group.id) {
+      activeChatTitle.textContent = data.group.name;
+    }
+
+    // Refresh groups
+    const idx = myGroups.findIndex(g => g.id === activeChat);
+    if (idx !== -1) {
+      myGroups[idx] = data.group;
+    }
+    
+    renderRoomsList();
+    openGroupSettings(); // Refresh settings UI to show new name
   } catch (err) {
     alert('Error: ' + err.message);
   }

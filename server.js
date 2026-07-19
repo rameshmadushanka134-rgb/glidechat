@@ -1223,6 +1223,39 @@ app.post('/api/groups/avatar', async (req, res) => {
   }
 });
 
+// API: Rename a custom group
+app.post('/api/groups/rename', async (req, res) => {
+  const { groupId, name, username } = req.body;
+  if (!groupId || !name || !username) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+
+  const cleanName = name.trim();
+  if (cleanName.length === 0) {
+    return res.status(400).json({ error: 'Group name cannot be empty' });
+  }
+
+  try {
+    const group = await Group.findOne({ id: groupId });
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    const isAdmin = group.admins.some(a => a.toLowerCase() === username.toLowerCase());
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Unauthorized: Admin privileges required.' });
+    }
+
+    group.name = cleanName;
+    await group.save();
+
+    // Broadcast the group update to all connected clients
+    io.emit('group_updated', group);
+
+    res.json({ message: 'Group renamed successfully', group });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // API: Group Admin controls
 app.post('/api/groups/admin', async (req, res) => {
   const { groupId, username, action, targetUsername } = req.body;
