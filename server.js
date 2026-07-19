@@ -1476,6 +1476,32 @@ app.post('/api/posts/comment/reply', async (req, res) => {
 });
 
 // API: Delete a comment
+// API: Delete a post (only allowed for the author)
+app.post('/api/posts/delete', async (req, res) => {
+  const { postId, username } = req.body;
+  if (!postId || !username) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+
+  try {
+    const post = await Post.findOne({ id: postId });
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    if (post.author.toLowerCase() !== username.toLowerCase()) {
+      return res.status(403).json({ error: 'Unauthorized to delete this post' });
+    }
+
+    await Post.deleteOne({ id: postId });
+
+    io.emit('post_deleted', { postId });
+    res.json({ message: 'Post deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.post('/api/posts/comment/delete', async (req, res) => {
   const { postId, commentId, username } = req.body;
   if (!postId || !commentId || !username) {

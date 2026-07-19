@@ -2309,6 +2309,20 @@ function initSocket() {
     }
   });
 
+  socket.on('post_deleted', ({ postId }) => {
+    postsFeed = postsFeed.filter(p => p.id !== postId);
+    const searchInputVal = document.getElementById('feed-search-input') ? document.getElementById('feed-search-input').value.trim() : '';
+    if (searchInputVal) {
+      const filteredPosts = postsFeed.filter(p => 
+        (p.text && p.text.toLowerCase().includes(searchInputVal.toLowerCase())) ||
+        (p.author && p.author.toLowerCase().includes(searchInputVal.toLowerCase()))
+      );
+      renderPostsFeed(filteredPosts);
+    } else {
+      renderPostsFeed();
+    }
+  });
+
   socket.on('typing', ({ from, to, isTyping }) => {
     if (to === 'group' && activeChat === 'group') {
       if (isTyping && from !== currentUser.username) {
@@ -3370,14 +3384,21 @@ function renderPostsFeed(posts = postsFeed) {
     });
 
     card.innerHTML = `
-      <div class="post-header">
-        <div onclick="openUserProfileModal('${post.author}')" style="cursor:pointer; display:inline-flex;">
-          ${getUserAvatarHtml(post.author, 38)}
+      <div class="post-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <div onclick="openUserProfileModal('${post.author}')" style="cursor:pointer; display:inline-flex;">
+            ${getUserAvatarHtml(post.author, 38)}
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.15rem;">
+            <span class="post-author" onclick="openUserProfileModal('${post.author}')" style="cursor:pointer;">${escapeHtml(post.author)}</span>
+            <span class="post-time">${date}</span>
+          </div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:0.15rem;">
-          <span class="post-author" onclick="openUserProfileModal('${post.author}')" style="cursor:pointer;">${escapeHtml(post.author)}</span>
-          <span class="post-time">${date}</span>
-        </div>
+        ${post.author.toLowerCase() === currentUser.username.toLowerCase() ? `
+          <button class="delete-post-btn" onclick="deletePost('${post.id}', event)" title="Delete Post" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.5rem; transition: color 0.2s; font-size: 0.9rem;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        ` : ''}
       </div>
       
       ${post.text ? `<div class="post-text">${escapeHtml(post.text)}</div>` : ''}
@@ -4432,4 +4453,25 @@ window.zoomGroupDP = function(groupId) {
   }
 
   modal.classList.remove('hidden');
+}
+
+window.deletePost = async function(postId, event) {
+  if (event) event.stopPropagation();
+  if (!confirm('Are you sure you want to delete this post?')) return;
+
+  try {
+    const res = await fetch('/api/posts/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postId,
+        username: currentUser.username
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete post');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
 }
