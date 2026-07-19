@@ -3090,7 +3090,7 @@ function openGroupSettings() {
     li.style.border = '1px solid var(--border-color)';
     
     const isMemberAdmin = group.admins.some(a => a.toLowerCase() === member.toLowerCase());
-    const isMemberCreator = group.createdBy.toLowerCase() === member.toLowerCase();
+    const isMemberCreator = group.creator && group.creator.toLowerCase() === member.toLowerCase();
     
     let rolesText = '';
     if (isMemberCreator) rolesText = ' <span style="font-size:0.7rem; background:rgba(168,85,247,0.2); color:#a855f7; padding:2px 6px; border-radius:4px; margin-left:0.25rem;">Creator</span>';
