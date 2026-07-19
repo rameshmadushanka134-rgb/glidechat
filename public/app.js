@@ -54,7 +54,23 @@ let isRingtonePlaying = false;
 const storedUser = localStorage.getItem('user_session');
 if (storedUser) {
   try {
-    currentUser = JSON.parse(storedUser);
+    const userObj = JSON.parse(storedUser);
+    if (userObj && userObj.token) {
+      const parts = userObj.token.split('.');
+      if (parts.length === 2) {
+        const payload = JSON.parse(atob(parts[0]));
+        if (Date.now() > payload.expiry) {
+          localStorage.removeItem('user_session');
+          currentUser = null;
+        } else {
+          currentUser = userObj;
+        }
+      } else {
+        currentUser = userObj;
+      }
+    } else {
+      currentUser = userObj;
+    }
   } catch (e) {
     localStorage.removeItem('user_session');
   }
@@ -2051,6 +2067,11 @@ function initSocket() {
 
   socket.on('force_logout', () => {
     alert('Your account has been deleted by the administrator.');
+    logout();
+  });
+
+  socket.on('auth_failed', () => {
+    alert('Your session has expired. Please log in again.');
     logout();
   });
 

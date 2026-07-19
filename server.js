@@ -1562,6 +1562,7 @@ io.on('connection', (socket) => {
       const verifiedUsername = verifyToken(token);
       if (!verifiedUsername || verifiedUsername.toLowerCase() !== username.toLowerCase()) {
         console.error(`Socket authentication failed for user: ${username}`);
+        socket.emit('auth_failed', { error: 'Session expired' });
         socket.disconnect();
         return;
       }
